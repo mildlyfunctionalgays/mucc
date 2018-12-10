@@ -1,4 +1,3 @@
-use crate::lex::util::WhitespaceSkip;
 use std::iter::Iterator;
 use std::collections::VecDeque;
 
@@ -50,16 +49,16 @@ pub enum LexItem {
     Point,
 }
 
-pub struct Lexer<'a, It: Iterator<Item=char>> {
-    source: WhitespaceSkip<'a, &'a mut It>,
+pub struct Lexer<It: Iterator<Item=char>> {
+    source: It,
     lookahead: VecDeque<char>
 }
 
-impl<'a, It> Lexer<'a, It>
+impl<It> Lexer<It>
 where It: Iterator<Item=char> {
-    pub fn new(mut src: &'a mut It) -> Lexer<'a, It> {
+    pub fn new(src: It) -> Lexer<It> {
         Lexer {
-            source: WhitespaceSkip::new(&mut src),
+            source: src,
             lookahead: VecDeque::new()
         }
     }
@@ -72,7 +71,7 @@ where It: Iterator<Item=char> {
     }
 }
 
-impl<'a, It> Iterator for Lexer<'a, It>
+impl<It> Iterator for Lexer<It>
 where It: Iterator<Item=char> {
     type Item = LexItem;
 
