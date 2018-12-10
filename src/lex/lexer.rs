@@ -1,4 +1,9 @@
-enum LexItem {
+use crate::lex::util::WhitespaceSkip;
+use std::iter::Iterator;
+use std::collections::VecDeque;
+
+#[derive(Debug)]
+pub enum LexItem {
     // Literals
     StringLiteral(String),
     NumericLiteral(String), // only return a string here so we can figure out the type later
@@ -26,6 +31,8 @@ enum LexItem {
     GreaterThan,
     LessOrEqual,
     GreaterOrEqual,
+    Increment,
+    Decrement,
 
     // Brackets
     LeftParen,
@@ -43,31 +50,48 @@ enum LexItem {
     Point,
 }
 
-struct Lexer<It: Iterator<char>> {
-    source: It,
-    lookahead: VecDequeue<char>
+pub struct Lexer<'a, It: Iterator<Item=char>> {
+    source: WhitespaceSkip<'a, &'a mut It>,
+    lookahead: VecDeque<char>
 }
 
-impl<It> Lexer<It> {
-    pub fn new(&mut src: It) -> Lexer<It> {
+impl<'a, It> Lexer<'a, It>
+where It: Iterator<Item=char> {
+    pub fn new(mut src: &'a mut It) -> Lexer<'a, It> {
         Lexer {
-            source: src,
-            lookahead: VecDequeue::new()
+            source: WhitespaceSkip::new(&mut src),
+            lookahead: VecDeque::new()
         }
     }
 
+    fn next_char(&mut self) -> Option<char> {
+        Some(match self.lookahead.pop_front() {
+            Some(ch) => ch,
+            None => self.source.next()?,
+        })
+    }
 }
 
-impl<It> Iterator<Item = LexItem> for Lexer<It> {
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut chr = self.source.next()?;
-        match chr {
-            '+' => Some(Plus),
-            '-' => Some(Minus),
-            '*' => Some(Mul),
-            '/' => Some(Div),
-            '%' => Some(Mod),
-            _ => None,
+impl<'a, It> Iterator for Lexer<'a, It>
+where It: Iterator<Item=char> {
+    type Item = LexItem;
+
+    fn next(&mut self) -> Option<LexItem> {
+        match self.next_char()? {
+            '+' => {
+                match self.next_char()? {
+                    '+' => Some(LexItem::Increment),
+                        ch => {
+                            self.lookahead.push_front(ch);
+                            Some(LexItem::Plus)
+                        },
+                }
+            },
+            '-' => Some(LexItem::Minus),
+            '*' => Some(LexItem::Mul),
+            '/' => Some(LexItem::Div),
+            '%' => Some(LexItem::Mod),
+            _ => None,  // We have an invalid char
         }
     }
 }
