@@ -1,7 +1,7 @@
 mod lex;
 use crate::lex::lexer::Lexer;
-use std::fs::File;
 use std::env;
+use std::fs::File;
 use std::io::Read;
 
 /// A super simple main function which lexes
