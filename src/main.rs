@@ -7,7 +7,7 @@ use std::io::Read;
 /// A super simple main function which lexes
 fn main() -> std::io::Result<()> {
     if env::args().len() != 2 {
-        eprintln!("Usage: µcc <filename>");
+        eprintln!("Usage: μcc <filename>");
         return Ok(());
     }
     let filename = env::args().nth(1).unwrap();

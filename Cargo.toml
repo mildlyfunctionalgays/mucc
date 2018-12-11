@@ -1,5 +1,5 @@
 [package]
-name = "µcc"
+name = "μcc"
 version = "0.1.0"
 authors = ["Artemis Tosini <me@artem.ist>", "Skye Jensen <skyeajensen@gmail.com>"]
 edition = "2018"
