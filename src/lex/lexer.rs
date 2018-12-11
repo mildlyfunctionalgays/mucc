@@ -12,22 +12,53 @@ pub enum LexKeyword {
 }
 
 const LITERAL_TOKENS: &[(&str, LexItem)] = &[
+    ("<=", LexItem::LessOrEqual),
+    ("==", LexItem::Equals),
+    ("!=", LexItem::NotEqual),
+    (">=", LexItem::GreaterOrEqual),
+    (">", LexItem::GreaterThan),
     ("+", LexItem::Plus),
     ("-", LexItem::Minus),
-    ("++", LexItem::Increment),
-    ("->", LexItem::PointerDeref),
-    ("--", LexItem::Decrement),
+    ("*", LexItem::Mul),
+    ("/", LexItem::Div),
+    ("%", LexItem::Mod),
+    ("<<", LexItem::LShift),
+    (">>", LexItem::RShift),
+    ("~", LexItem::Not),
+    ("^", LexItem::Xor),
+    ("|", LexItem::Or),
+    ("&", LexItem::And),
+    ("!", LexItem::LogicalNot),
+    ("||", LexItem::LogicalOr),
+    ("&&", LexItem::LogicalAnd),
+    ("==", LexItem::Equals),
+    ("!=", LexItem::NotEqual),
     ("<", LexItem::LessThan),
+    (">", LexItem::GreaterThan),
+    ("<=", LexItem::LessOrEqual),
+    (">=", LexItem::GreaterOrEqual),
+    ("++", LexItem::Increment),
+    ("--", LexItem::Decrement),
+    ("(", LexItem::LeftParen),
+    (")", LexItem::RightParen),
+    ("[", LexItem::LeftBracket),
+    ("]", LexItem::RightBracket),
+    ("{", LexItem::LeftCurlyBrace),
+    ("}", LexItem::RightCurlyBrace),
+    ("->", LexItem::PointerDeref),
+    (";", LexItem::Semicolon),
+    (":", LexItem::Colon),
+    (",", LexItem::Comma),
+    (".", LexItem::Period),
 ];
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LexItem {
     // Literals
     StringLiteral(String),
-    NumericLiteral(String),
+    NumericLiteral(String, String),
     // only return a string here so we can figure out the type later
     FloatLiteral(String),
-    HexLiteral(String),
 
     Identifier(String),
     Keyword(LexKeyword),
@@ -209,4 +240,17 @@ fn test_lexer_pointerderef_lessthan_minus() {
         "-><-",
         &[LexItem::PointerDeref, LexItem::LessThan, LexItem::Minus],
     );
+}
+
+#[test]
+fn test_lexer_triple() {
+    test_lexer_str(
+        "|||&&|",
+        &[
+            LexItem::LogicalOr,
+            LexItem::Or,
+            LexItem::LogicalAnd,
+            LexItem::Or,
+        ],
+    )
 }

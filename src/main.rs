@@ -22,5 +22,5 @@ fn main() -> std::io::Result<()> {
         println!("Got token {:?}", token);
     }
 
-    return Ok(());
+    Ok(())
 }
