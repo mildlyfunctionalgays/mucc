@@ -11,6 +11,22 @@ pub enum LexKeyword {
     Do,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+enum NumberType {
+    Float(f32),
+    Double(f64),
+    SignedChar(i8),
+    UnsignedChar(u8),
+    SignedShort(i16),
+    UnsignedShort(u16),
+    SignedInt(i32),
+    UnsignedInt(u32),
+    SignedLong(i64),
+    UnsignedLong(u64),
+    SignedLongLong(i128),
+    UnsignedLongLong(u128),
+}
+
 const LITERAL_TOKENS: &[(&str, LexItem)] = &[
     ("<=", LexItem::LessOrEqual),
     ("==", LexItem::Equals),
@@ -52,12 +68,11 @@ const LITERAL_TOKENS: &[(&str, LexItem)] = &[
     (".", LexItem::Period),
 ];
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum LexItem {
     // Literals
-    StringLiteral(String),
-    NumericLiteral(String, String),
-    // only return a string here so we can figure out the type later
+    StringLiteral(Vec<u8>),
+    NumericLiteral(NumberType),
     FloatLiteral(String),
 
     Identifier(String),
@@ -151,14 +166,8 @@ where
     fn nextnt_string(&mut self, s: &str) {
         self.lookahead.extend(s.chars().rev());
     }
-}
 
-impl<It> Iterator for Lexer<It>
-where
-    It: Iterator<Item = char>,
-{
-    type Item = LexItem;
-    fn next(&mut self) -> Option<LexItem> {
+    fn next_regular_token(&mut self) -> Option<LexItem> {
         let mut token: String = self.next_after_whitespace()?.to_string();
 
         Some(loop {
@@ -205,6 +214,31 @@ where
                 let (key, value) = largest_match?;
                 self.nextnt_string(&token[key.len()..]);
                 break value.clone();
+            }
+        })
+    }
+}
+
+impl<It> Iterator for Lexer<It>
+where
+    It: Iterator<Item = char>,
+{
+    type Item = LexItem;
+
+    fn next(&mut self) -> Option<LexItem> {
+        self.next_regular_token().or_else(|| {
+            let ch = self.next_after_whitespace()?;
+            match ch {
+                '"' => unimplemented!(),
+                '0'...'9' => {
+                    if ch == '0' {
+                        unimplemented!()
+                    } else {
+                        unimplemented!()
+                    }
+                }
+                '\'' => unimplemented!(),
+                _ => unimplemented!(),
             }
         })
     }
