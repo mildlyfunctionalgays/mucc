@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::iter::Iterator;
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LexKeyword {
     Struct,
     Typedef,
@@ -11,11 +11,21 @@ pub enum LexKeyword {
     Do,
 }
 
-#[derive(Debug)]
+const LITERAL_TOKENS: &[(&str, LexItem)] = &[
+    ("+", LexItem::Plus),
+    ("-", LexItem::Minus),
+    ("++", LexItem::Increment),
+    ("->", LexItem::PointerDeref),
+    ("--", LexItem::Decrement),
+    ("<", LexItem::LessThan),
+];
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LexItem {
     // Literals
     StringLiteral(String),
-    NumericLiteral(String), // only return a string here so we can figure out the type later
+    NumericLiteral(String),
+    // only return a string here so we can figure out the type later
     FloatLiteral(String),
     HexLiteral(String),
 
@@ -23,8 +33,10 @@ pub enum LexItem {
     Keyword(LexKeyword),
 
     // Operations
-    Plus,  // Not necessarily a binomial operation
-    Minus, // Not necessarily a binomial operation
+    Plus,
+    // Not necessarily a binomial operation
+    Minus,
+    // Not necessarily a binomial operation
     Mul,
     Div,
     Mod,
@@ -62,14 +74,14 @@ pub enum LexItem {
     Period,
 }
 
-pub struct Lexer<It: Iterator<Item = char>> {
+pub struct Lexer<It: Iterator<Item=char>> {
     source: It,
     lookahead: VecDeque<char>,
 }
 
 impl<It> Lexer<It>
-where
-    It: Iterator<Item = char>,
+    where
+        It: Iterator<Item=char>,
 {
     pub fn new(src: It) -> Lexer<It> {
         Lexer {
@@ -105,38 +117,100 @@ where
     fn nextnt(&mut self, ch: char) {
         self.lookahead.push_back(ch);
     }
+
+    fn nextnt_string(&mut self, s: &str) {
+        self.lookahead.extend(s.chars().rev());
+    }
 }
 
 impl<It> Iterator for Lexer<It>
-where
-    It: Iterator<Item = char>,
+    where
+        It: Iterator<Item=char>,
 {
     type Item = LexItem;
 
+//    fn next(&mut self) -> Option<LexItem> {
+//        Some(match self.next_after_whitespace()? {
+//            '+' =>
+//                // Use next_char here because you aren't supposed to accept + +
+//                match self.next_char() {
+//                    Some('+') => LexItem::Increment,
+//                    ch => {
+//                        if let Some(ch) = ch {
+//                            self.nextnt(ch);
+//                        }
+//                        LexItem::Plus
+//                    },
+//                }
+//            '-' => match self.next_char()? {
+//                '-' => LexItem::Decrement,
+//                '>' => LexItem::PointerDeref,
+//                ch => {
+//                    self.nextnt(ch);
+//                    LexItem::Minus
+//                },
+//            },
+//
+//            '*' => LexItem::Mul,
+//            '/' => LexItem::Div,
+//            '%' => LexItem::Mod,
+//            ch => return None,
+//        })
+//    }
     fn next(&mut self) -> Option<LexItem> {
-        Some(match self.next_after_whitespace()? {
-            '+' =>
-                // Use next_char here because you aren't supposed to accept + +
-                match self.next_char()? {
-                    '+' => LexItem::Increment,
-                    ch => {
-                        self.nextnt(ch);
-                        LexItem::Plus
-                    },
-                }
-            '-' => match self.next_char()? {
-                '-' => LexItem::Decrement,
-                '>' => LexItem::PointerDeref,
-                ch => {
-                    self.nextnt(ch);
-                    LexItem::Minus
-                },
-            },
+        let mut token: String = self.next_after_whitespace()?.to_string();
 
-            '*' => LexItem::Mul,
-            '/' => LexItem::Div,
-            '%' => LexItem::Mod,
-            ch => return None,
+
+            Some(loop {
+                let exact_match = LITERAL_TOKENS.iter()
+                    .find(|(key, _)| token == *key)
+                    .map(|(_, value)| value);
+                let partial_matches: Vec<&LexItem> = LITERAL_TOKENS.iter()
+                .filter_map(|(key, val)| if key.starts_with(&token) { Some(val) } else { None })
+                .collect();
+
+            match partial_matches.len() {
+                1 => return exact_match.cloned(),
+                0 => {},
+                _ => {
+                    if let Some(next) = self.next_char() {
+                        token.push(next);
+                        continue
+                    }
+                },
+            }
+            let largest_match = LITERAL_TOKENS.iter()
+                .filter(|(key, _)| token.starts_with(key))
+                .max_by_key(|(key, _)| key.len());
+            let (key, value) = largest_match?;
+            self.nextnt_string(&token[key.len()..]);
+            break value.clone();
         })
     }
+}
+
+#[cfg(test)]
+fn test_lexer_str(s: &str, tokens: &[LexItem]) {
+    let lexer = Lexer::new(s.chars());
+
+    let vec = lexer.collect::<Vec<_>>();
+
+    assert_eq!(vec.as_slice(), tokens);
+}
+
+#[test]
+fn test_lexer_plus() {
+    test_lexer_str("+", &[LexItem::Plus]);
+}
+#[test]
+fn test_lexer_increment() {
+    test_lexer_str("++", &[LexItem::Increment]);
+}
+#[test]
+fn test_lexer_plus_plus() {
+    test_lexer_str("+ +", &[LexItem::Plus, LexItem::Plus]);
+}
+#[test]
+fn test_lexer_pointerderef_lessthan_minus() {
+    test_lexer_str("-><-", &[LexItem::PointerDeref, LexItem::LessThan, LexItem::Minus]);
 }
