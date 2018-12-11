@@ -140,6 +140,10 @@ where
         self.lookahead.pop_back().or_else(|| self.source.next())
     }
 
+    fn next_chars(&mut self, n: usize) -> Option<String> {
+        (0..n).map(|_| self.next_char()).collect::<Option<String>>()
+    }
+
     fn skip_chars(&mut self, chars: &str) -> Option<char> {
         loop {
             let ch = self.next_char()?;
@@ -186,7 +190,7 @@ where
                 })
                 .collect();
 
-            println!("{:?}: {:?}", token, partial_matches);
+            println!("{}: {:?}", token, partial_matches);
 
             let mut too_much = match partial_matches.len() {
                 1 => {
@@ -199,6 +203,15 @@ where
                 0 => true,
                 _ => false,
             };
+
+            // This means that we shouldn't be treating it as a normal token
+            // It only happens if there are no partial matches and we have only one character
+            // This will need changing if there are to be normal tokens which include ASCII
+            // or Unicode characters valid in identifiers, keywords, or literals
+            if too_much && token.len() == 1 {
+                self.nextnt_string(&token);
+                return None;
+            }
             if !too_much {
                 if let Some(char) = self.next_char() {
                     token.push(char);
@@ -206,6 +219,7 @@ where
                     too_much = true;
                 }
             }
+
             if too_much {
                 let largest_match = LITERAL_TOKENS
                     .iter()
@@ -216,6 +230,33 @@ where
                 break value.clone();
             }
         })
+    }
+
+    fn parse_char_literal(&mut self) -> Option<LexItem> {
+        let r = match self.next_char()? {
+            '\'' => None,
+            '\\' => match self.next_char()? {
+                'n' => Some(b'\n'),
+                't' => Some(b'\t'),
+                'r' => Some(b'\r'),
+                '\\' => Some(b'\\'),
+                '\'' => Some(b'\''),
+                'x' => u8::from_str_radix(&self.next_chars(2)?, 16).ok(),
+                _ => unimplemented!(),
+            },
+            ch => {
+                if (ch as u32) <= 0x7f {
+                    Some(ch as u8)
+                } else {
+                    None
+                }
+            }
+        };
+        if self.next_char()? == '\'' {
+            Some(LexItem::NumericLiteral(NumberType::UnsignedChar(r?)))
+        } else {
+            None
+        }
     }
 }
 
@@ -228,6 +269,7 @@ where
     fn next(&mut self) -> Option<LexItem> {
         self.next_regular_token().or_else(|| {
             let ch = self.next_after_whitespace()?;
+            println!("Got char '{}'", ch);
             match ch {
                 '"' => unimplemented!(),
                 '0'...'9' => {
@@ -237,7 +279,7 @@ where
                         unimplemented!()
                     }
                 }
-                '\'' => unimplemented!(),
+                '\'' => self.parse_char_literal(),
                 _ => unimplemented!(),
             }
         })
@@ -285,6 +327,19 @@ fn test_lexer_triple() {
             LexItem::Or,
             LexItem::LogicalAnd,
             LexItem::Or,
+        ],
+    )
+}
+
+#[test]
+fn test_valid_char_literal() {
+    test_lexer_str(
+        "'c' '\\x1b''\\\\'\t\t' '",
+        &[
+            LexItem::NumericLiteral(NumberType::UnsignedChar('c' as u8)),
+            LexItem::NumericLiteral(NumberType::UnsignedChar('\x1b' as u8)),
+            LexItem::NumericLiteral(NumberType::UnsignedChar('\\' as u8)),
+            LexItem::NumericLiteral(NumberType::UnsignedChar(' ' as u8)),
         ],
     )
 }
