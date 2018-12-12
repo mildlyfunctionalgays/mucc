@@ -1,129 +1,10 @@
-use std::collections::VecDeque;
+pub use super::constants::*;
 use std::iter::Iterator;
 use std::str::FromStr;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum LexKeyword {
-    Struct,
-    Typedef,
-    If,
-    For,
-    While,
-    Do,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-enum NumberType {
-    Float(f32),
-    Double(f64),
-    SignedChar(i8),
-    UnsignedChar(u8),
-    SignedShort(i16),
-    UnsignedShort(u16),
-    SignedInt(i32),
-    UnsignedInt(u32),
-    SignedLong(i64),
-    UnsignedLong(u64),
-    SignedLongLong(i128),
-    UnsignedLongLong(u128),
-}
-
-const LITERAL_TOKENS: &[(&str, LexItem)] = &[
-    ("<=", LexItem::LessOrEqual),
-    ("==", LexItem::Equals),
-    ("!=", LexItem::NotEqual),
-    (">=", LexItem::GreaterOrEqual),
-    (">", LexItem::GreaterThan),
-    ("+", LexItem::Plus),
-    ("-", LexItem::Minus),
-    ("*", LexItem::Mul),
-    ("/", LexItem::Div),
-    ("%", LexItem::Mod),
-    ("<<", LexItem::LShift),
-    (">>", LexItem::RShift),
-    ("~", LexItem::Not),
-    ("^", LexItem::Xor),
-    ("|", LexItem::Or),
-    ("&", LexItem::And),
-    ("!", LexItem::LogicalNot),
-    ("||", LexItem::LogicalOr),
-    ("&&", LexItem::LogicalAnd),
-    ("==", LexItem::Equals),
-    ("!=", LexItem::NotEqual),
-    ("<", LexItem::LessThan),
-    (">", LexItem::GreaterThan),
-    ("<=", LexItem::LessOrEqual),
-    (">=", LexItem::GreaterOrEqual),
-    ("++", LexItem::Increment),
-    ("--", LexItem::Decrement),
-    ("(", LexItem::LeftParen),
-    (")", LexItem::RightParen),
-    ("[", LexItem::LeftBracket),
-    ("]", LexItem::RightBracket),
-    ("{", LexItem::LeftCurlyBrace),
-    ("}", LexItem::RightCurlyBrace),
-    ("->", LexItem::PointerDeref),
-    (";", LexItem::Semicolon),
-    (":", LexItem::Colon),
-    (",", LexItem::Comma),
-    (".", LexItem::Period),
-];
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum LexItem {
-    // Literals
-    StringLiteral(Vec<u8>),
-    NumericLiteral(NumberType),
-    FloatLiteral(String),
-
-    Identifier(String),
-    Keyword(LexKeyword),
-
-    // Operations
-    Plus,
-    // Not necessarily a binomial operation
-    Minus,
-    // Not necessarily a binomial operation
-    Mul,
-    Div,
-    Mod,
-    LShift,
-    RShift,
-    Not,
-    Xor,
-    Or,
-    And,
-    LogicalNot,
-    LogicalOr,
-    LogicalAnd,
-    Equals,
-    NotEqual,
-    LessThan,
-    GreaterThan,
-    LessOrEqual,
-    GreaterOrEqual,
-    Increment,
-    Decrement,
-
-    // Brackets
-    LeftParen,
-    RightParen,
-    LeftBracket,
-    RightBracket,
-    LeftCurlyBrace,
-    RightCurlyBrace,
-
-    // Other Syntax
-    PointerDeref,
-    Semicolon,
-    Colon,
-    Comma,
-    Period,
-}
-
 pub struct Lexer<It: Iterator<Item = char>> {
     source: It,
-    lookahead: VecDeque<char>,
+    lookahead: Vec<char>,
 }
 
 impl<It> Lexer<It>
@@ -133,12 +14,12 @@ where
     pub fn new(src: It) -> Lexer<It> {
         Lexer {
             source: src,
-            lookahead: VecDeque::new(),
+            lookahead: Vec::new(),
         }
     }
 
     fn next_char(&mut self) -> Option<char> {
-        self.lookahead.pop_back().or_else(|| self.source.next())
+        self.lookahead.pop().or_else(|| self.source.next())
     }
 
     fn next_chars(&mut self, n: usize) -> Option<String> {
@@ -157,7 +38,7 @@ where
         self.skip_chars(" \n\t\r")
     }
     fn nextnt(&mut self, ch: char) {
-        self.lookahead.push_back(ch);
+        self.lookahead.push(ch);
     }
 
     fn nextnt_string(&mut self, s: &str) {
@@ -379,101 +260,4 @@ where
             }
         })
     }
-}
-
-#[cfg(test)]
-fn test_lexer_str(s: &str, tokens: &[LexItem]) {
-    let lexer = Lexer::new(s.chars());
-
-    let vec = lexer.collect::<Vec<_>>();
-
-    println!("got symbols {:?}", vec);
-
-    assert_eq!(vec.as_slice(), tokens);
-}
-
-#[test]
-fn test_lexer_plus() {
-    test_lexer_str("+", &[LexItem::Plus]);
-}
-
-#[test]
-fn test_lexer_increment() {
-    test_lexer_str("++", &[LexItem::Increment]);
-}
-
-#[test]
-fn test_lexer_plus_plus() {
-    test_lexer_str("+ +", &[LexItem::Plus, LexItem::Plus]);
-}
-
-#[test]
-fn test_lexer_pointerderef_lessthan_minus() {
-    test_lexer_str(
-        "-><-",
-        &[LexItem::PointerDeref, LexItem::LessThan, LexItem::Minus],
-    );
-}
-
-#[test]
-fn test_lexer_triple() {
-    test_lexer_str(
-        "|||&&|",
-        &[
-            LexItem::LogicalOr,
-            LexItem::Or,
-            LexItem::LogicalAnd,
-            LexItem::Or,
-        ],
-    );
-}
-
-#[test]
-fn test_lexer_valid_char_literal() {
-    test_lexer_str(
-        "'c' '\\x1b''\\\\'\t\t' '",
-        &[
-            LexItem::NumericLiteral(NumberType::UnsignedChar(b'c')),
-            LexItem::NumericLiteral(NumberType::UnsignedChar(b'\x1b')),
-            LexItem::NumericLiteral(NumberType::UnsignedChar(b'\\')),
-            LexItem::NumericLiteral(NumberType::UnsignedChar(b' ')),
-        ],
-    );
-}
-
-#[test]
-fn test_lexer_invalid_char_literal() {
-    test_lexer_str("'", &[]);
-    test_lexer_str("''", &[]);
-    test_lexer_str("'\\\\", &[]);
-}
-
-#[test]
-fn test_lexer_int_literal() {
-    test_lexer_str(
-        "1234,-   0ul 332ll",
-        &[
-            LexItem::NumericLiteral(NumberType::SignedInt(1234)),
-            LexItem::Comma,
-            LexItem::Minus,
-            LexItem::NumericLiteral(NumberType::UnsignedLong(0)),
-            LexItem::NumericLiteral(NumberType::SignedLongLong(332)),
-        ],
-    )
-}
-
-#[test]
-fn test_lexer_nonint_literal() {
-    test_lexer_str(
-        "0b101011,-0o70ul 0x12fll+0xDeAdBeEfuL",
-        &[
-            LexItem::NumericLiteral(NumberType::SignedInt(0b101011)),
-            LexItem::Comma,
-            LexItem::Minus,
-            LexItem::NumericLiteral(NumberType::UnsignedLong(0o70)),
-            LexItem::NumericLiteral(NumberType::SignedLongLong(0x12f)),
-            LexItem::Plus,
-            LexItem::NumericLiteral(NumberType::UnsignedLong(0xdeadbeef)),
-        ],
-    )
 }
