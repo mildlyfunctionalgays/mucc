@@ -296,9 +296,57 @@ where
                 '0' => {
                     ch = self.next_char()?;
                     match ch {
-                        'b' => unimplemented!(),
-                        'o' => unimplemented!(),
-                        'x' => unimplemented!(),
+                        'b' => {
+                            let mut num = String::new();
+                            num.push(self.next_char()?);
+                            while let Some(ch) = self.next_char() {
+                                let chl = ch.to_ascii_lowercase();
+                                if '0' == ch || ch == '1' {
+                                    num.push(chl);
+                                } else {
+                                    self.nextnt(ch);
+                                    break;
+                                }
+                            }
+
+                            Some(LexItem::NumericLiteral(
+                                self.parse_type_specifier(u128::from_str_radix(&num, 2).ok()?)?,
+                            ))
+                        }
+                        'o' => {
+                            let mut num = String::new();
+                            num.push(self.next_char()?);
+                            while let Some(ch) = self.next_char() {
+                                let chl = ch.to_ascii_lowercase();
+                                if '0' <= ch && ch <= '7' {
+                                    num.push(chl);
+                                } else {
+                                    self.nextnt(ch);
+                                    break;
+                                }
+                            }
+
+                            Some(LexItem::NumericLiteral(
+                                self.parse_type_specifier(u128::from_str_radix(&num, 8).ok()?)?,
+                            ))
+                        }
+                        'x' => {
+                            let mut num = String::new();
+                            num.push(self.next_char()?);
+                            while let Some(ch) = self.next_char() {
+                                let chl = ch.to_ascii_lowercase();
+                                if '0' <= ch && ch <= '9' || 'a' <= chl && chl <= 'f' {
+                                    num.push(chl);
+                                } else {
+                                    self.nextnt(ch);
+                                    break;
+                                }
+                            }
+
+                            Some(LexItem::NumericLiteral(self.parse_type_specifier(
+                                u128::from_str_radix(&num, 16).ok()?,
+                            )?))
+                        }
                         '0'...'9' => unimplemented!(),
                         'U' | 'L' | 'u' | 'l' => {
                             self.nextnt(ch);
@@ -318,7 +366,6 @@ where
                             num.push(ch);
                         } else {
                             self.nextnt(ch);
-                            println!("Adding back next char {} to lookahead", ch);
                             break;
                         }
                     }
@@ -411,6 +458,22 @@ fn test_lexer_int_literal() {
             LexItem::Minus,
             LexItem::NumericLiteral(NumberType::UnsignedLong(0)),
             LexItem::NumericLiteral(NumberType::SignedLongLong(332)),
+        ],
+    )
+}
+
+#[test]
+fn test_lexer_nonint_literal() {
+    test_lexer_str(
+        "0b101011,-0o70ul 0x12fll+0xDeAdBeEfuL",
+        &[
+            LexItem::NumericLiteral(NumberType::SignedInt(0b101011)),
+            LexItem::Comma,
+            LexItem::Minus,
+            LexItem::NumericLiteral(NumberType::UnsignedLong(0o70)),
+            LexItem::NumericLiteral(NumberType::SignedLongLong(0x12f)),
+            LexItem::Plus,
+            LexItem::NumericLiteral(NumberType::UnsignedLong(0xdeadbeef)),
         ],
     )
 }
