@@ -1,5 +1,5 @@
-use super::constants::*;
-use super::lexer::*;
+use super::constants::{LexItem, NumberType};
+use super::lexer::Lexer;
 
 #[cfg(test)]
 fn test_lexer_str(s: &str, tokens: &[LexItem]) {
@@ -85,7 +85,7 @@ fn test_lexer_int_literal() {
 #[test]
 fn test_lexer_nonint_literal() {
     test_lexer_str(
-        "0b101011,-0o70ul 0x12fll+0xDeAdBeEfuL",
+        "0b101011,-0o70ul 0x12fll+0xDeAdBeEfuL 69l 010  `5u",
         &[
             LexItem::NumericLiteral(NumberType::SignedInt(0b101011)),
             LexItem::Comma,
@@ -94,6 +94,8 @@ fn test_lexer_nonint_literal() {
             LexItem::NumericLiteral(NumberType::SignedLongLong(0x12f)),
             LexItem::Plus,
             LexItem::NumericLiteral(NumberType::UnsignedLong(0xdeadbeef)),
+            LexItem::NumericLiteral(NumberType::SignedLong(69)),
+            LexItem::NumericLiteral(NumberType::UnsignedInt(0o105)),
         ],
     )
 }

@@ -228,7 +228,24 @@ where
                                 u128::from_str_radix(&num, 16).ok()?,
                             )?))
                         }
-                        '0'...'9' => unimplemented!(),
+                        '0'...'9' => {
+                            let mut num = String::new();
+                            num.push(ch);
+                            while let Some(ch) = self.next_char() {
+                                let chl = ch.to_ascii_lowercase();
+                                if '0' <= ch && ch <= '7' {
+                                    num.push(chl);
+                                } else {
+                                    self.nextnt(ch);
+                                    break;
+                                }
+                            }
+
+                            Some(LexItem::NumericLiteral(
+                                self.parse_type_specifier(u128::from_str_radix(&num, 8).ok()?)?,
+                            ))
+
+                        },
                         'U' | 'L' | 'u' | 'l' => {
                             self.nextnt(ch);
                             Some(LexItem::NumericLiteral(self.parse_type_specifier(0)?))
