@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use std::iter::Iterator;
+use std::str::FromStr;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LexKeyword {
@@ -155,14 +156,6 @@ where
     fn next_after_whitespace(&mut self) -> Option<char> {
         self.skip_chars(" \n\t\r")
     }
-
-    fn is_valid_identifier_start(&self, ch: char) -> bool {
-        unimplemented!()
-    }
-
-    fn is_valid_identifier(&self, ch: char) -> bool {
-        unimplemented!()
-    }
     fn nextnt(&mut self, ch: char) {
         self.lookahead.push_back(ch);
     }
@@ -189,8 +182,6 @@ where
                     }
                 })
                 .collect();
-
-            println!("{}: {:?}", token, partial_matches);
 
             let mut too_much = match partial_matches.len() {
                 1 => {
@@ -246,6 +237,7 @@ where
             },
             ch => {
                 if (ch as u32) <= 0x7f {
+                    // This is one byte in utf8
                     Some(ch as u8)
                 } else {
                     None
@@ -258,6 +250,35 @@ where
             None
         }
     }
+
+    fn parse_type_specifier(&mut self, num: u128) -> Option<NumberType> {
+        let mut signed = true;
+        let mut size = 32usize;
+        while let Some(ch) = self.next_char() {
+            match ch.to_ascii_lowercase() {
+                'u' => signed = false,
+                'l' => size <<= 1,
+                'a'...'z' => return None,
+                _ => {
+                    self.nextnt(ch);
+                    break;
+                }
+            }
+        }
+        Some(match (size, signed) {
+            (8, false) => NumberType::UnsignedChar(num as u8),
+            (8, true) => NumberType::SignedChar(num as i8),
+            (16, false) => NumberType::UnsignedShort(num as u16),
+            (16, true) => NumberType::SignedShort(num as i16),
+            (32, false) => NumberType::UnsignedInt(num as u32),
+            (32, true) => NumberType::SignedInt(num as i32),
+            (64, false) => NumberType::UnsignedLong(num as u64),
+            (64, true) => NumberType::SignedLong(num as i64),
+            (128, false) => NumberType::UnsignedLongLong(num as u128),
+            (128, true) => NumberType::SignedLongLong(num as i128),
+            _ => return None,
+        })
+    }
 }
 
 impl<It> Iterator for Lexer<It>
@@ -268,16 +289,43 @@ where
 
     fn next(&mut self) -> Option<LexItem> {
         self.next_regular_token().or_else(|| {
-            let ch = self.next_after_whitespace()?;
-            println!("Got char '{}'", ch);
+            let mut ch = self.next_after_whitespace()?;
+            println!("ch is {}, lookahead is {:?}", ch, self.lookahead);
             match ch {
                 '"' => unimplemented!(),
-                '0'...'9' => {
-                    if ch == '0' {
-                        unimplemented!()
-                    } else {
-                        unimplemented!()
+                '0' => {
+                    ch = self.next_char()?;
+                    match ch {
+                        'b' => unimplemented!(),
+                        'o' => unimplemented!(),
+                        'x' => unimplemented!(),
+                        '0'...'9' => unimplemented!(),
+                        'U' | 'L' | 'u' | 'l' => {
+                            self.nextnt(ch);
+                            Some(LexItem::NumericLiteral(self.parse_type_specifier(0)?))
+                        }
+                        _ => {
+                            self.nextnt(ch);
+                            Some(LexItem::NumericLiteral(NumberType::SignedInt(0)))
+                        }
                     }
+                }
+                '1'...'9' => {
+                    let mut num = String::new();
+                    num.push(ch);
+                    while let Some(ch) = self.next_char() {
+                        if '0' <= ch && ch <= '9' {
+                            num.push(ch);
+                        } else {
+                            self.nextnt(ch);
+                            println!("Adding back next char {} to lookahead", ch);
+                            break;
+                        }
+                    }
+
+                    Some(LexItem::NumericLiteral(
+                        self.parse_type_specifier(u128::from_str(&num).ok()?)?,
+                    ))
                 }
                 '\'' => self.parse_char_literal(),
                 _ => unimplemented!(),
@@ -291,6 +339,8 @@ fn test_lexer_str(s: &str, tokens: &[LexItem]) {
     let lexer = Lexer::new(s.chars());
 
     let vec = lexer.collect::<Vec<_>>();
+
+    println!("got symbols {:?}", vec);
 
     assert_eq!(vec.as_slice(), tokens);
 }
@@ -328,18 +378,39 @@ fn test_lexer_triple() {
             LexItem::LogicalAnd,
             LexItem::Or,
         ],
-    )
+    );
 }
 
 #[test]
-fn test_valid_char_literal() {
+fn test_lexer_valid_char_literal() {
     test_lexer_str(
         "'c' '\\x1b''\\\\'\t\t' '",
         &[
-            LexItem::NumericLiteral(NumberType::UnsignedChar('c' as u8)),
-            LexItem::NumericLiteral(NumberType::UnsignedChar('\x1b' as u8)),
-            LexItem::NumericLiteral(NumberType::UnsignedChar('\\' as u8)),
-            LexItem::NumericLiteral(NumberType::UnsignedChar(' ' as u8)),
+            LexItem::NumericLiteral(NumberType::UnsignedChar(b'c')),
+            LexItem::NumericLiteral(NumberType::UnsignedChar(b'\x1b')),
+            LexItem::NumericLiteral(NumberType::UnsignedChar(b'\\')),
+            LexItem::NumericLiteral(NumberType::UnsignedChar(b' ')),
+        ],
+    );
+}
+
+#[test]
+fn test_lexer_invalid_char_literal() {
+    test_lexer_str("'", &[]);
+    test_lexer_str("''", &[]);
+    test_lexer_str("'\\\\", &[]);
+}
+
+#[test]
+fn test_lexer_int_literal() {
+    test_lexer_str(
+        "1234,-   0ul 332ll",
+        &[
+            LexItem::NumericLiteral(NumberType::SignedInt(1234)),
+            LexItem::Comma,
+            LexItem::Minus,
+            LexItem::NumericLiteral(NumberType::UnsignedLong(0)),
+            LexItem::NumericLiteral(NumberType::SignedLongLong(332)),
         ],
     )
 }
