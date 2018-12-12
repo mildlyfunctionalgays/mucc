@@ -7,6 +7,13 @@ pub struct Lexer<It: Iterator<Item = char>> {
     lookahead: Vec<char>,
 }
 
+fn identifier_char(ch: char) -> bool {
+    match ch {
+        'a'...'z' | 'A'...'Z' | '0'...'9' => true,
+        _ => false,
+    }
+}
+
 impl<It> Lexer<It>
 where
     It: Iterator<Item = char>,
@@ -49,57 +56,46 @@ where
         let mut token: String = self.next_after_whitespace()?.to_string();
 
         Some(loop {
-            let exact_match = LITERAL_TOKENS
+            let partial_matches: Vec<&(&str, LexItem)> = LITERAL_TOKENS
                 .iter()
-                .find(|(key, _)| token == *key)
-                .map(|(_, value)| value);
-            let partial_matches: Vec<&LexItem> = LITERAL_TOKENS
-                .iter()
-                .filter_map(|(key, val)| {
-                    if key.starts_with(&token) {
-                        Some(val)
-                    } else {
-                        None
-                    }
-                })
+                .filter(|(key, val)|key.trim_end_matches('\x00').starts_with(&token))
                 .collect();
 
-            let mut too_much = match partial_matches.len() {
-                1 => {
-                    if let Some(match_) = exact_match {
-                        break match_.clone();
-                    } else {
-                        false
-                    }
-                }
-                0 => true,
-                _ => false,
-            };
+            println!("{:?}: {:?}", token, partial_matches);
 
-            // This means that we shouldn't be treating it as a normal token
-            // It only happens if there are no partial matches and we have only one character
-            // This will need changing if there are to be normal tokens which include ASCII
-            // or Unicode characters valid in identifiers, keywords, or literals
-            if too_much && token.len() == 1 {
+            let returning_match = partial_matches.len() < 2 &&
+                if let Some((match_, _)) = partial_matches.first() {
+                    token.starts_with(match_)
+                } else { true };
+
+            if !returning_match {
+                if let Some(ch) = self.next_char() {
+                    println!("added {:?}", ch);
+                    token.push(ch);
+                    continue;
+                }
+            }
+
+            let largest_match = LITERAL_TOKENS
+                .iter()
+                .filter(|(key, _)| {
+                    token.starts_with(key.trim_end_matches('\x00')) &&
+                    if key.ends_with('\x00') {
+                        token
+                            .trim_start_matches(key.trim_end_matches('\x00'))
+                            .chars()
+                            .next()
+                            .map(|ch|!identifier_char(ch))
+                            .unwrap_or(true)
+                    } else { true }
+                })
+                .max_by_key(|(key, _)| key.len());
+            if let Some((key, value)) = largest_match {
+                self.nextnt_string(&token[key.trim_end_matches('\x00').len()..]);
+                break value.clone();
+            } else {
                 self.nextnt_string(&token);
                 return None;
-            }
-            if !too_much {
-                if let Some(char) = self.next_char() {
-                    token.push(char);
-                } else {
-                    too_much = true;
-                }
-            }
-
-            if too_much {
-                let largest_match = LITERAL_TOKENS
-                    .iter()
-                    .filter(|(key, _)| token.starts_with(key))
-                    .max_by_key(|(key, _)| key.len());
-                let (key, value) = largest_match?;
-                self.nextnt_string(&token[key.len()..]);
-                break value.clone();
             }
         })
     }

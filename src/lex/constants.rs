@@ -63,6 +63,7 @@ pub const LITERAL_TOKENS: &[(&str, LexItem)] = &[
     (":", LexItem::Colon),
     (",", LexItem::Comma),
     (".", LexItem::Period),
+    ("while\x00", LexItem::Keyword(LexKeyword::While)),
 ];
 
 #[derive(Clone, Debug, PartialEq)]

@@ -1,5 +1,6 @@
 use super::constants::{LexItem, NumberType};
 use super::lexer::Lexer;
+use crate::lex::constants::LexKeyword;
 
 #[cfg(test)]
 fn test_lexer_str(s: &str, tokens: &[LexItem]) {
@@ -59,6 +60,12 @@ fn test_lexer_valid_char_literal() {
             LexItem::NumericLiteral(NumberType::UnsignedInt(b' ' as u32)),
         ],
     );
+}
+
+#[test]
+fn test_lexer_while_keyword() {
+    test_lexer_str("while", &[LexItem::Keyword(LexKeyword::While)]);
+    test_lexer_str("while[", &[LexItem::Keyword(LexKeyword::While), LexItem::LeftBracket]);
 }
 
 #[test]
