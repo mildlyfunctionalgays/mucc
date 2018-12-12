@@ -65,7 +65,10 @@ fn test_lexer_valid_char_literal() {
 #[test]
 fn test_lexer_while_keyword() {
     test_lexer_str("while", &[LexItem::Keyword(LexKeyword::While)]);
-    test_lexer_str("while[", &[LexItem::Keyword(LexKeyword::While), LexItem::LeftBracket]);
+    test_lexer_str(
+        "while[",
+        &[LexItem::Keyword(LexKeyword::While), LexItem::LeftBracket],
+    );
 }
 
 #[test]
@@ -103,6 +106,27 @@ fn test_lexer_nonint_literal() {
             LexItem::NumericLiteral(NumberType::UnsignedLong(0xdeadbeef)),
             LexItem::NumericLiteral(NumberType::SignedLong(69)),
             LexItem::NumericLiteral(NumberType::UnsignedInt(0o105)),
+        ],
+    )
+}
+#[test]
+fn test_lexer_identifier() {
+    test_lexer_str(
+        "[hello](var1able,a, ⚧, 3u nit)",
+        &[
+            LexItem::LeftBracket,
+            LexItem::Identifier("hello".to_string()),
+            LexItem::RightBracket,
+            LexItem::LeftParen,
+            LexItem::Identifier("var1able".to_string()),
+            LexItem::Comma,
+            LexItem::Identifier("a".to_string()),
+            LexItem::Comma,
+            LexItem::Identifier("⚧".to_string()),
+            LexItem::Comma,
+            LexItem::NumericLiteral(NumberType::UnsignedInt(3)),
+            LexItem::Identifier("nit".to_string()),
+            LexItem::RightParen,
         ],
     )
 }

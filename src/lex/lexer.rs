@@ -2,16 +2,15 @@ pub use super::constants::*;
 use std::iter::Iterator;
 use std::str::FromStr;
 
+const INVALID_IDENTIFIER_CHARS: &str = " !\"#%&'()*+,-./;;<=>?@[\\]^`{|}~";
+
 pub struct Lexer<It: Iterator<Item = char>> {
     source: It,
     lookahead: Vec<char>,
 }
 
-fn identifier_char(ch: char) -> bool {
-    match ch {
-        'a'...'z' | 'A'...'Z' | '0'...'9' => true,
-        _ => false,
-    }
+fn is_identifier_char(ch: char) -> bool {
+    !INVALID_IDENTIFIER_CHARS.chars().any(|c| c == ch)
 }
 
 impl<It> Lexer<It>
@@ -58,15 +57,17 @@ where
         Some(loop {
             let partial_matches: Vec<&(&str, LexItem)> = LITERAL_TOKENS
                 .iter()
-                .filter(|(key, val)|key.trim_end_matches('\x00').starts_with(&token))
+                .filter(|(key, val)| key.trim_end_matches('\x00').starts_with(&token))
                 .collect();
 
             println!("{:?}: {:?}", token, partial_matches);
 
-            let returning_match = partial_matches.len() < 2 &&
-                if let Some((match_, _)) = partial_matches.first() {
+            let returning_match = partial_matches.len() < 2
+                && if let Some((match_, _)) = partial_matches.first() {
                     token.starts_with(match_)
-                } else { true };
+                } else {
+                    true
+                };
 
             if !returning_match {
                 if let Some(ch) = self.next_char() {
@@ -79,15 +80,17 @@ where
             let largest_match = LITERAL_TOKENS
                 .iter()
                 .filter(|(key, _)| {
-                    token.starts_with(key.trim_end_matches('\x00')) &&
-                    if key.ends_with('\x00') {
-                        token
-                            .trim_start_matches(key.trim_end_matches('\x00'))
-                            .chars()
-                            .next()
-                            .map(|ch|!identifier_char(ch))
-                            .unwrap_or(true)
-                    } else { true }
+                    token.starts_with(key.trim_end_matches('\x00'))
+                        && if key.ends_with('\x00') {
+                            token
+                                .trim_start_matches(key.trim_end_matches('\x00'))
+                                .chars()
+                                .next()
+                                .map(|ch| !is_identifier_char(ch))
+                                .unwrap_or(true)
+                        } else {
+                            true
+                        }
                 })
                 .max_by_key(|(key, _)| key.len());
             if let Some((key, value)) = largest_match {
@@ -160,7 +163,6 @@ where
     fn next(&mut self) -> Option<LexItem> {
         self.next_regular_token().or_else(|| {
             let mut ch = self.next_after_whitespace()?;
-            println!("ch is {}, lookahead is {:?}", ch, self.lookahead);
             match ch {
                 '"' => unimplemented!(),
                 '0' => {
@@ -233,8 +235,7 @@ where
                             Some(LexItem::NumericLiteral(
                                 self.parse_type_specifier(u128::from_str_radix(&num, 8).ok()?)?,
                             ))
-
-                        },
+                        }
                         'U' | 'L' | 'u' | 'l' => {
                             self.nextnt(ch);
                             Some(LexItem::NumericLiteral(self.parse_type_specifier(0)?))
@@ -263,9 +264,23 @@ where
                 }
                 '\'' => self.parse_char_literal(),
                 _ => {
-                    println!("{}", ch);
-                    unimplemented!()
-                },
+                    if INVALID_IDENTIFIER_CHARS.chars().any(|c| c == ch) {
+                        None
+                    } else {
+                        let mut ident = String::new();
+                        ident.push(ch);
+                        while let Some(ch) = self.next_char() {
+                            if !INVALID_IDENTIFIER_CHARS.chars().any(|c| c == ch) {
+                                ident.push(ch);
+                            } else {
+                                self.nextnt(ch);
+                                break;
+                            }
+                        }
+
+                        Some(LexItem::Identifier(ident))
+                    }
+                }
             }
         })
     }
