@@ -53,10 +53,10 @@ fn test_lexer_valid_char_literal() {
     test_lexer_str(
         "'c' '\\x1b''\\\\'\t\t' '",
         &[
-            LexItem::NumericLiteral(NumberType::UnsignedChar(b'c')),
-            LexItem::NumericLiteral(NumberType::UnsignedChar(b'\x1b')),
-            LexItem::NumericLiteral(NumberType::UnsignedChar(b'\\')),
-            LexItem::NumericLiteral(NumberType::UnsignedChar(b' ')),
+            LexItem::NumericLiteral(NumberType::UnsignedInt(b'c' as u32)),
+            LexItem::NumericLiteral(NumberType::UnsignedInt(b'\x1b' as u32)),
+            LexItem::NumericLiteral(NumberType::UnsignedInt(b'\\' as u32)),
+            LexItem::NumericLiteral(NumberType::UnsignedInt(b' ' as u32)),
         ],
     );
 }
@@ -85,7 +85,7 @@ fn test_lexer_int_literal() {
 #[test]
 fn test_lexer_nonint_literal() {
     test_lexer_str(
-        "0b101011,-0o70ul 0x12fll+0xDeAdBeEfuL 69l 010  `5u",
+        "0b101011,-0o70ul 0x12fll+0xDeAdBeEfuL 69l 0105u",
         &[
             LexItem::NumericLiteral(NumberType::SignedInt(0b101011)),
             LexItem::Comma,

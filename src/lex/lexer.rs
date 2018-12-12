@@ -105,28 +105,21 @@ where
     }
 
     fn parse_char_literal(&mut self) -> Option<LexItem> {
-        let r = match self.next_char()? {
+        let r: Option<u32> = match self.next_char()? {
             '\'' => None,
             '\\' => match self.next_char()? {
-                'n' => Some(b'\n'),
-                't' => Some(b'\t'),
-                'r' => Some(b'\r'),
-                '\\' => Some(b'\\'),
-                '\'' => Some(b'\''),
-                'x' => u8::from_str_radix(&self.next_chars(2)?, 16).ok(),
+                'n' => Some(b'\n' as u32),
+                't' => Some(b'\t' as u32),
+                'r' => Some(b'\r' as u32),
+                '\\' => Some(b'\\' as u32),
+                '\'' => Some(b'\'' as u32),
+                'x' => u32::from_str_radix(&self.next_chars(2)?, 16).ok(),
                 _ => unimplemented!(),
             },
-            ch => {
-                if (ch as u32) <= 0x7f {
-                    // This is one byte in utf8
-                    Some(ch as u8)
-                } else {
-                    None
-                }
-            }
+            ch => Some(ch as u32),
         };
         if self.next_char()? == '\'' {
-            Some(LexItem::NumericLiteral(NumberType::UnsignedChar(r?)))
+            Some(LexItem::NumericLiteral(NumberType::UnsignedInt(r?)))
         } else {
             None
         }
@@ -273,7 +266,10 @@ where
                     ))
                 }
                 '\'' => self.parse_char_literal(),
-                _ => unimplemented!(),
+                _ => {
+                    println!("{}", ch);
+                    unimplemented!()
+                },
             }
         })
     }
