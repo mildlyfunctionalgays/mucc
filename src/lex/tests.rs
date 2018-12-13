@@ -132,7 +132,7 @@ fn test_lexer_identifier() {
 }
 
 #[test]
-fn test_lexer_funcion_definition() {
+fn test_lexer_function_definition() {
     test_lexer_str(
         "int main(int argc, char *argv[]) {\n\treturn 0;\n}",
         &[
@@ -153,6 +153,19 @@ fn test_lexer_funcion_definition() {
             LexItem::NumericLiteral(NumberType::SignedInt(0)),
             LexItem::Semicolon,
             LexItem::RightCurlyBrace,
+        ],
+    )
+}
+
+#[test]
+fn test_lexer_string_literal() {
+    test_lexer_str(
+        "\"Hello,\t world\",\'c\' \" This is a ☭ \\\" test \\\"\" ",
+        &[
+            LexItem::StringLiteral("Hello,\t world".as_bytes().to_vec()),
+            LexItem::Comma,
+            LexItem::NumericLiteral(NumberType::UnsignedInt(b'c' as u32)),
+            LexItem::StringLiteral(" This is a ☭ \" test \"".as_bytes().to_vec()),
         ],
     )
 }

@@ -1,4 +1,5 @@
 pub use super::constants::*;
+use std::char;
 use std::iter::Iterator;
 use std::str::FromStr;
 
@@ -57,10 +58,8 @@ where
         Some(loop {
             let partial_matches: Vec<&(&str, LexItem)> = LITERAL_TOKENS
                 .iter()
-                .filter(|(key, val)| key.trim_end_matches('\x00').starts_with(&token))
+                .filter(|(key, _)| key.trim_end_matches('\x00').starts_with(&token))
                 .collect();
-
-            println!("{:?}: {:?}", token, partial_matches);
 
             let returning_match = partial_matches.len() < 2
                 && if let Some((match_, _)) = partial_matches.first() {
@@ -71,7 +70,6 @@ where
 
             if !returning_match {
                 if let Some(ch) = self.next_char() {
-                    println!("added {:?}", ch);
                     token.push(ch);
                     continue;
                 }
@@ -164,7 +162,29 @@ where
         self.next_regular_token().or_else(|| {
             let mut ch = self.next_after_whitespace()?;
             match ch {
-                '"' => unimplemented!(),
+                '"' => {
+                    let mut s = String::new();
+                    loop {
+                        let ch = self.next_char()?;
+                        match ch {
+                            '"' => break,
+                            '\\' => s.push(match self.next_char()? {
+                                '\\' => '\\',
+                                'n' => '\n',
+                                't' => '\t',
+                                'r' => '\r',
+                                '"' => '"',
+                                'x' => char::from_u32(
+                                    u32::from_str_radix(&self.next_chars(2)?, 16).ok()?,
+                                )?,
+                                _ => unimplemented!(),
+                            }),
+                            '\n' => return None,
+                            _ => s.push(ch),
+                        }
+                    }
+                    Some(LexItem::StringLiteral(s.as_bytes().to_vec()))
+                }
                 '0' => {
                     ch = self.next_char()?;
                     match ch {
