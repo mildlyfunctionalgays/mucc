@@ -130,3 +130,29 @@ fn test_lexer_identifier() {
         ],
     )
 }
+
+#[test]
+fn test_lexer_funcion_definition() {
+    test_lexer_str(
+        "int main(int argc, char *argv[]) {\n\treturn 0;\n}",
+        &[
+            LexItem::Keyword(LexKeyword::Int),
+            LexItem::Identifier("main".to_string()),
+            LexItem::LeftParen,
+            LexItem::Keyword(LexKeyword::Int),
+            LexItem::Identifier("argc".to_string()),
+            LexItem::Comma,
+            LexItem::Keyword(LexKeyword::Char),
+            LexItem::Mul,
+            LexItem::Identifier("argv".to_string()),
+            LexItem::LeftBracket,
+            LexItem::RightBracket,
+            LexItem::RightParen,
+            LexItem::LeftCurlyBrace,
+            LexItem::Keyword(LexKeyword::Return),
+            LexItem::NumericLiteral(NumberType::SignedInt(0)),
+            LexItem::Semicolon,
+            LexItem::RightCurlyBrace,
+        ],
+    )
+}
