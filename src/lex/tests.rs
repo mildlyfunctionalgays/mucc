@@ -1,16 +1,33 @@
 use super::constants::{LexItem, NumberType};
 use super::lexer::Lexer;
 use crate::lex::constants::LexKeyword;
+use crate::lex::errors::LexError;
 
 #[cfg(test)]
 fn test_lexer_str(s: &str, tokens: &[LexItem]) {
     let lexer = Lexer::new(s.chars());
 
-    let vec = lexer.collect::<Vec<_>>();
+    let vec = lexer.map(|res| res.item.unwrap()).collect::<Vec<_>>();
 
     println!("got symbols {:?}", vec);
 
     assert_eq!(vec.as_slice(), tokens);
+}
+
+#[cfg(test)]
+fn test_lexer_str_error(s: &str, tokens: &[Result<LexItem, LexError>]) {
+    let lexer = Lexer::new(s.chars());
+
+    let vec = lexer.map(|res| res.item).collect::<Vec<_>>();
+
+    println!("got symbols {:?}", vec);
+
+    assert_eq!(vec.as_slice(), tokens);
+}
+
+#[test]
+fn test_lexer_error_invalid_size_literal() {
+    test_lexer_str_error("0ulll", &[Err(LexError::InvalidSize(256))]);
 }
 
 #[test]
