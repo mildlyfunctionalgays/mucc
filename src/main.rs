@@ -1,4 +1,6 @@
+#![allow(dead_code)]
 mod lex;
+mod parse;
 use crate::lex::lexer::Lexer;
 use std::env;
 use std::fs::File;

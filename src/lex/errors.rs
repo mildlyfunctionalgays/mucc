@@ -59,7 +59,7 @@ impl LexResult {
         self.item.ok()
     }
 
-    pub fn is_err(self) -> bool {
+    pub fn is_err(&self) -> bool {
         self.item.is_err()
     }
 }
