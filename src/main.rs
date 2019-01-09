@@ -1,3 +1,5 @@
+#![recursion_limit = "10000"]
+//#![feature(trace_macros)]
 #![allow(dead_code)]
 mod lex;
 mod parse;

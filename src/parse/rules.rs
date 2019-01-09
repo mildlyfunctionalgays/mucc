@@ -183,8 +183,4 @@ Literal -> FloatLiteral,
 */
 
 pub const RULES: &[(ParseNodeType, &[ParseNodeType])] =
-    &[
-        (Start, &[]),
-        (Start, &[TopStatement, Start]),
-        
-    ];
+    &[(Start, &[]), (Start, &[TopStatement, Start])];

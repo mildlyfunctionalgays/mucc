@@ -55,6 +55,12 @@ pub enum NumberType {
     UnsignedLongLong(u128),
 }
 
+impl Default for NumberType {
+    fn default() -> Self {
+        NumberType::UnsignedChar(0)
+    }
+}
+
 pub const LITERAL_TOKENS: &[(&str, LexItem)] = &[
     ("<=", LexItem::LessOrEqual),
     ("==", LexItem::Equals),
@@ -138,7 +144,6 @@ pub enum LexItem {
     // Literals
     StringLiteral(Vec<u8>),
     NumericLiteral(NumberType),
-    FloatLiteral(String),
 
     Identifier(String),
     Keyword(LexKeyword),
