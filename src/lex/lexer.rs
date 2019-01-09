@@ -12,6 +12,9 @@ pub struct Lexer<It: Iterator<Item = char>> {
     lookahead: Vec<char>,
     line: usize,
     column: usize,
+    start_line: usize,
+    start_column: usize,
+    last_column: usize,
 }
 
 fn is_identifier_char(ch: char) -> bool {
@@ -28,13 +31,25 @@ where
             lookahead: Vec::new(),
             line: 1,
             column: 0,
+            start_line: 1,
+            start_column: 0,
+            last_column: 0,
         }
+    }
+
+    fn set_start_pos(&mut self) -> Option<()> {
+        let ch = self.next_after_whitespace()?;
+        self.start_line = self.line;
+        self.start_column = self.column;
+        self.nextnt(ch);
+        Some(())
     }
 
     fn next_char(&mut self) -> Option<char> {
         let ch = self.lookahead.pop().or_else(|| self.source.next())?;
         match ch {
             '\n' => {
+                self.last_column = self.column;
                 self.line += 1;
                 self.column = 0;
             }
@@ -59,11 +74,18 @@ where
         self.skip_chars(" \n\t\r")
     }
     fn nextnt(&mut self, ch: char) {
+        match ch {
+            '\n' => {
+                self.line -= 1;
+                self.column = self.last_column;
+            }
+            _ => self.column -= 1,
+        }
         self.lookahead.push(ch);
     }
 
     fn nextnt_string(&mut self, s: &str) {
-        self.lookahead.extend(s.chars().rev());
+        s.chars().rev().for_each(|c| self.nextnt(c));
     }
 
     fn next_regular_token(&mut self) -> Option<LexResult> {
@@ -139,16 +161,16 @@ where
     fn ok_token(&self, token: LexItem) -> Option<LexResult> {
         Some(LexResult {
             item: Ok(token),
-            line: self.line,
-            column: self.column,
+            line: self.start_line,
+            column: self.start_column,
         })
     }
 
     fn error_token(&self, token: LexError) -> Option<LexResult> {
         Some(LexResult {
             item: Err(token),
-            line: self.line,
-            column: self.column,
+            line: self.start_line,
+            column: self.start_column,
         })
     }
 
@@ -195,6 +217,7 @@ where
     type Item = LexResult;
 
     fn next(&mut self) -> Option<LexResult> {
+        self.set_start_pos()?;
         self.next_regular_token().or_else(|| {
             let mut ch = self.next_after_whitespace()?;
             match ch {

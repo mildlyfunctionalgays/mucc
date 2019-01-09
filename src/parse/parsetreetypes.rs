@@ -33,4 +33,6 @@ impl ParseNodeType {
 pub struct ParseNode {
     node_type: ParseNodeType,
     children: Vec<Rc<ParseNode>>,
+    line: usize,
+    column: usize,
 }

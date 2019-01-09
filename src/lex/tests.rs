@@ -1,4 +1,5 @@
 use super::constants::{LexItem, NumberType};
+use super::errors::LexResult;
 use super::lexer::Lexer;
 use crate::lex::constants::LexKeyword;
 use crate::lex::errors::LexError;
@@ -185,4 +186,50 @@ fn test_lexer_string_literal() {
             LexItem::StringLiteral(" This is a ☭ \" test \"".as_bytes().to_vec()),
         ],
     )
+}
+
+#[test]
+fn test_lexer_location() {
+    let s = "int main(int argc, char *argv[]) {\n\treturn 0;\n}";
+    let lexer = Lexer::new(s.chars());
+    let vec = lexer.map(|res| (res.line, res.column)).collect::<Vec<_>>();
+    assert_eq!(
+        vec,
+        vec![
+            (1, 1),
+            (1, 5),
+            (1, 9),
+            (1, 10),
+            (1, 14),
+            (1, 18),
+            (1, 20),
+            (1, 25),
+            (1, 26),
+            (1, 30),
+            (1, 31),
+            (1, 32),
+            (1, 34),
+            (2, 2),
+            (2, 9),
+            (2, 10),
+            (3, 1),
+        ]
+    );
+    //            LexItem::Keyword(LexKeyword::Int),
+    //            LexItem::Identifier("main".to_string()),
+    //            LexItem::LeftParen,
+    //            LexItem::Keyword(LexKeyword::Int),
+    //            LexItem::Identifier("argc".to_string()),
+    //            LexItem::Comma,
+    //            LexItem::Keyword(LexKeyword::Char),
+    //            LexItem::Mul,
+    //            LexItem::Identifier("argv".to_string()),
+    //            LexItem::LeftBracket,
+    //            LexItem::RightBracket,
+    //            LexItem::RightParen,
+    //            LexItem::LeftCurlyBrace,
+    //            LexItem::Keyword(LexKeyword::Return),
+    //            LexItem::NumericLiteral(NumberType::SignedInt(0)),
+    //            LexItem::Semicolon,
+    //            LexItem::RightCurlyBrace,
 }
