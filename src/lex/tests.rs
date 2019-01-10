@@ -1,5 +1,4 @@
 use super::constants::{LexItem, NumberType};
-use super::errors::LexResult;
 use super::lexer::Lexer;
 use crate::lex::constants::LexKeyword;
 use crate::lex::errors::LexError;
@@ -72,10 +71,10 @@ fn test_lexer_valid_char_literal() {
     test_lexer_str(
         "'c' '\\x1b''\\\\'\t\t' '",
         &[
-            LexItem::NumericLiteral(NumberType::UnsignedInt(b'c' as u32)),
-            LexItem::NumericLiteral(NumberType::UnsignedInt(b'\x1b' as u32)),
-            LexItem::NumericLiteral(NumberType::UnsignedInt(b'\\' as u32)),
-            LexItem::NumericLiteral(NumberType::UnsignedInt(b' ' as u32)),
+            LexItem::NumericLiteral(NumberType::UnsignedInt(u32::from(b'c'))),
+            LexItem::NumericLiteral(NumberType::UnsignedInt(u32::from(b'\x1b'))),
+            LexItem::NumericLiteral(NumberType::UnsignedInt(u32::from(b'\\'))),
+            LexItem::NumericLiteral(NumberType::UnsignedInt(u32::from(b' '))),
         ],
     );
 }
@@ -115,13 +114,13 @@ fn test_lexer_nonint_literal() {
     test_lexer_str(
         "0b101011,-0o70ul 0x12fll+0xDeAdBeEfuL 69l 0105u",
         &[
-            LexItem::NumericLiteral(NumberType::SignedInt(0b101011)),
+            LexItem::NumericLiteral(NumberType::SignedInt(0b10_1011)),
             LexItem::Comma,
             LexItem::Minus,
             LexItem::NumericLiteral(NumberType::UnsignedLong(0o70)),
             LexItem::NumericLiteral(NumberType::SignedLongLong(0x12f)),
             LexItem::Plus,
-            LexItem::NumericLiteral(NumberType::UnsignedLong(0xdeadbeef)),
+            LexItem::NumericLiteral(NumberType::UnsignedLong(0xdead_beef)),
             LexItem::NumericLiteral(NumberType::SignedLong(69)),
             LexItem::NumericLiteral(NumberType::UnsignedInt(0o105)),
         ],
@@ -180,9 +179,9 @@ fn test_lexer_string_literal() {
     test_lexer_str(
         "\"Hello,\t world\",\'c\' \" This is a ☭ \\\" test \\\"\" ",
         &[
-            LexItem::StringLiteral("Hello,\t world".as_bytes().to_vec()),
+            LexItem::StringLiteral(b"Hello,\t world".to_vec()),
             LexItem::Comma,
-            LexItem::NumericLiteral(NumberType::UnsignedInt(b'c' as u32)),
+            LexItem::NumericLiteral(NumberType::UnsignedInt(u32::from(b'c'))),
             LexItem::StringLiteral(" This is a ☭ \" test \"".as_bytes().to_vec()),
         ],
     )
