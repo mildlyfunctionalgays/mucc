@@ -215,21 +215,4 @@ fn test_lexer_location() {
             (3, 1),
         ]
     );
-    //            LexItem::Keyword(LexKeyword::Int),
-    //            LexItem::Identifier("main".to_string()),
-    //            LexItem::LeftParen,
-    //            LexItem::Keyword(LexKeyword::Int),
-    //            LexItem::Identifier("argc".to_string()),
-    //            LexItem::Comma,
-    //            LexItem::Keyword(LexKeyword::Char),
-    //            LexItem::Mul,
-    //            LexItem::Identifier("argv".to_string()),
-    //            LexItem::LeftBracket,
-    //            LexItem::RightBracket,
-    //            LexItem::RightParen,
-    //            LexItem::LeftCurlyBrace,
-    //            LexItem::Keyword(LexKeyword::Return),
-    //            LexItem::NumericLiteral(NumberType::SignedInt(0)),
-    //            LexItem::Semicolon,
-    //            LexItem::RightCurlyBrace,
 }

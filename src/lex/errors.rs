@@ -32,6 +32,13 @@ pub struct LexResult {
     pub column: usize,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct LexSuccess {
+    pub item: LexItem,
+    pub line: usize,
+    pub column: usize,
+}
+
 impl Display for LexResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         match &self.item {
@@ -55,8 +62,16 @@ impl Display for LexResult {
 }
 
 impl LexResult {
-    pub fn ok(self) -> Option<LexItem> {
-        self.item.ok()
+    pub fn ok(self) -> Option<LexSuccess> {
+        if let Ok(item) = self.item {
+            Some(LexSuccess {
+                item,
+                line: self.line,
+                column: self.column,
+            })
+        } else {
+            None
+        }
     }
 
     pub fn is_err(&self) -> bool {

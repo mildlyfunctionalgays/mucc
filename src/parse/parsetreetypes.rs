@@ -1,14 +1,11 @@
-use crate::lex;
 use crate::lex::constants::LexItem;
 use crate::lex::constants::LexKeyword;
-use crate::lex::constants::NumberType;
 use crate::lex::constants::LITERAL_TOKENS;
-use crate::lex::lexer::Lexer;
 use std::mem::discriminant;
 use std::mem::Discriminant;
 use std::rc::Rc;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ParseNodeType {
     Lex(Discriminant<LexItem>),
     Keyword(Discriminant<LexKeyword>),
@@ -120,9 +117,10 @@ impl From<Discriminant<LexKeyword>> for ParseNodeType {
     }
 }*/
 
+#[derive(Clone)]
 pub struct ParseNode {
-    node_type: ParseNodeType,
-    children: Vec<Rc<ParseNode>>,
-    line: usize,
-    column: usize,
+    pub node_type: ParseNodeType,
+    pub children: Vec<Rc<ParseNode>>,
+    pub line: usize,
+    pub column: usize,
 }
