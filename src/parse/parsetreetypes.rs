@@ -5,10 +5,11 @@ use std::mem::discriminant;
 use std::mem::Discriminant;
 use std::rc::Rc;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ParseNodeType {
     Lex(Discriminant<LexItem>),
     Keyword(Discriminant<LexKeyword>),
+    RawLex(LexItem),
     Start,
     TopStatement,
     FunctionPointer,

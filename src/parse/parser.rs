@@ -2,13 +2,17 @@
 use super::parsetreetypes::{ParseNode, ParseNodeType};
 use super::rules::RULES;
 use crate::lex::errors::{LexError, LexResult};
+use crate::lex::constants::{LexItem, LexKeyword};
+use std::rc::Weak;
+use std::mem::discriminant;
+use std::rc::Rc;
 
 struct RuleState {
     pub result: ParseNodeType,
     pub rule: &'static [ParseNodeType],
     pub position: usize,
     pub self_node: Box<ParseNode>,
-    pub current_child: Box<Option<RuleState>>,
+    pub current_child: Option<Box<RuleState>>,
 }
 
 impl RuleState {
@@ -23,7 +27,7 @@ impl RuleState {
                 line: 1,
                 column: 1,
             }),
-            current_child: Box::new(None),
+            current_child: None,
         }
     }
 }
@@ -46,7 +50,83 @@ pub fn parse<T: Iterator<Item = LexResult>>(tokens: T) -> Box<ParseNode> {
         if let Ok(tok) = item.item {
             let mut to_delete = Vec::new();
             for (idx, rule) in candidate_rules.iter_mut().enumerate() {
-                to_delete.push(idx);
+                let mut parent = rule;
+
+                'outer: loop {
+                    let mut child = parent.current_child;
+                    if let Some(ref mut child) = parent.current_child {
+                        let mut child = child;
+                        while child.position >= child.rule.len() - 1 {
+                            if let Some(ref mut grandchild) = child.current_child {
+                                child = grandchild;
+                            } else {
+                                break 'outer;
+                            }
+                        }
+                        parent = child;
+                    } else {
+                        break
+                    }
+                }
+                loop {
+                    let mut parent2 = parent;
+                    while let Some(ref mut child) = parent2.current_child {
+                        if child.current_child.is_some() {
+                            parent2 = child;
+                        } else {
+                            break;
+                        }
+                    }
+                    let delete = if let Some(child) = parent2.current_child {
+                        child.position == child.rule.len()
+                    } else {
+                        false
+                    };
+                    if delete {
+                        parent2.position += 1;
+                        parent2.current_child = None;
+                    }
+                }
+
+                let needed = child.rule[child.position];
+                if let ParseNodeType::Keyword(kw) = needed {
+                    if let LexItem::Keyword(kw_tok) = tok {
+                        if discriminant(&kw_tok) == kw {
+                            unimplemented!()
+                        } else {
+                            to_delete.push(idx);
+                            break;
+                        }
+                    } else {
+                        to_delete.push(idx);
+                        break;
+                    }
+                } else if let ParseNodeType::Lex(item) = needed {
+                    if discriminant(&tok) == item {
+                        unimplemented!()
+                    } else {
+                        to_delete.push(idx);
+                        break;
+                    }
+                } else {
+                    let rules = search_rule(&needed)
+                        .iter()
+                        .map(|rule| {
+                            RuleState {
+                                result: needed.clone(),
+                                rule: *rule,
+                                position: 0,
+                                self_node: Box::new(ParseNode {
+                                    node_type: needed.clone(),
+                                    children: vec![],
+                                    line: 0,
+                                    column: 0
+                                }),
+                                current_child: None
+                            }
+                        });
+                }
+
             }
             to_delete.iter().rev().for_each(|idx| {
                 candidate_rules.remove(*idx);
