@@ -1,6 +1,7 @@
 use crate::lex::constants::LexItem;
 use crate::lex::constants::LexKeyword;
 use crate::lex::constants::LITERAL_TOKENS;
+use crate::lex::errors::LexSuccess;
 use std::mem::discriminant;
 use std::mem::Discriminant;
 use std::rc::Rc;
@@ -10,7 +11,7 @@ pub enum ParseNodeType {
     Lex(Discriminant<LexItem>),
     Keyword(Discriminant<LexKeyword>),
     RawLex(LexItem),
-    Start,
+    Start, // There must only be one Start rule
     TopStatement,
     FunctionPointer,
     Type,
@@ -71,18 +72,6 @@ pub enum ParseNodeType {
     Members,
 }
 
-//impl From<fn(String) -> LexItem> for ParseNodeType {
-//    fn from(value: fn(String) -> LexItem) -> Self {
-//        ParseNodeType::Lex(discriminant(value.call((String::default(),))))
-//    }
-//}
-
-//impl<T: Fn(NumberType) -> LexItem> From<T> for ParseNodeType {
-//    fn from(value: T) -> Self {
-//        ParseNodeType::Lex(discriminant(value.call((NumberType::default(),))))
-//    }
-//}
-
 impl From<&str> for ParseNodeType {
     fn from(value: &str) -> Self {
         let match_: Option<&(&str, LexItem)> = LITERAL_TOKENS
@@ -112,16 +101,18 @@ impl From<Discriminant<LexKeyword>> for ParseNodeType {
     }
 }
 
-/*impl From<ParseNodeType> for ParseNodeType {
-    fn from(value: ParseNodeType) -> Self {
-        value
+impl From<LexSuccess> for ParseNodeType {
+    fn from(value: LexSuccess) -> Self {
+        if let LexItem::Keyword(kw) = value.item {
+            ParseNodeType::Keyword(discriminant(&kw))
+        } else {
+            ParseNodeType::Lex(discriminant(&value.item))
+        }
     }
-}*/
+}
 
 #[derive(Clone)]
 pub struct ParseNode {
     pub node_type: ParseNodeType,
     pub children: Vec<Rc<ParseNode>>,
-    pub line: usize,
-    pub column: usize,
 }
