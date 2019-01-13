@@ -4,6 +4,7 @@
 mod lex;
 mod parse;
 use crate::lex::lexer::Lexer;
+use crate::parse::parser::parse;
 use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -22,9 +23,8 @@ fn main() -> std::io::Result<()> {
     let mut chars = code.chars();
     let tokens = Lexer::new(&mut chars);
 
-    for token in tokens {
-        println!("Got token {:?}", token);
-    }
+    let tree = parse(tokens);
+    println!("Got tree {:?}", tree);
 
     Ok(())
 }

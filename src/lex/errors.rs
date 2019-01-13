@@ -78,3 +78,13 @@ impl LexResult {
         self.item.is_err()
     }
 }
+
+impl From<LexSuccess> for LexResult {
+    fn from(item: LexSuccess) -> Self {
+        LexResult {
+            item: Ok(item.item),
+            line: item.line,
+            column: item.column,
+        }
+    }
+}

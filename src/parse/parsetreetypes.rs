@@ -2,6 +2,7 @@ use crate::lex::constants::LexItem;
 use crate::lex::constants::LexKeyword;
 use crate::lex::constants::LITERAL_TOKENS;
 use crate::lex::errors::LexSuccess;
+use std::cell::RefCell;
 use std::mem::discriminant;
 use std::mem::Discriminant;
 use std::rc::Rc;
@@ -10,7 +11,7 @@ use std::rc::Rc;
 pub enum ParseNodeType {
     Lex(Discriminant<LexItem>),
     Keyword(Discriminant<LexKeyword>),
-    RawLex(LexItem),
+    RawLex(LexSuccess),
     Start, // There must only be one Start rule
     TopStatement,
     FunctionPointer,
@@ -111,8 +112,17 @@ impl From<LexSuccess> for ParseNodeType {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ParseNode {
     pub node_type: ParseNodeType,
-    pub children: Vec<Rc<ParseNode>>,
+    pub children: Vec<Rc<RefCell<ParseNode>>>,
+}
+
+impl ParseNode {
+    pub fn from_lex(lex: LexSuccess) -> Self {
+        ParseNode {
+            node_type: ParseNodeType::RawLex(lex),
+            children: Vec::new(),
+        }
+    }
 }
