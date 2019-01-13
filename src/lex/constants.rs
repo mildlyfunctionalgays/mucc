@@ -62,8 +62,17 @@ impl Default for NumberType {
 }
 
 pub const LITERAL_TOKENS: &[(&str, LexItem)] = &[
-    ("<=", LexItem::LessOrEqual),
-    ("==", LexItem::Equals),
+    ("=", LexItem::Assign),
+    ("+=", LexItem::AddAssign),
+    ("-=", LexItem::SubAssign),
+    ("*=", LexItem::MulAssign),
+    ("/=", LexItem::DivAssign),
+    ("%=", LexItem::ModAssign),
+    ("<<=", LexItem::LShiftAssign),
+    (">>=", LexItem::RShiftAssign),
+    ("&=", LexItem::AndAssign),
+    ("|=", LexItem::OrAssign),
+    ("^=", LexItem::XorAssign),
     ("!=", LexItem::NotEqual),
     (">=", LexItem::GreaterOrEqual),
     (">", LexItem::GreaterThan),
@@ -100,6 +109,7 @@ pub const LITERAL_TOKENS: &[(&str, LexItem)] = &[
     (":", LexItem::Colon),
     (",", LexItem::Comma),
     (".", LexItem::Period),
+    ("?", LexItem::Question),
     ("auto\x00", LexItem::Keyword(LexKeyword::Auto)),
     ("break\x00", LexItem::Keyword(LexKeyword::Break)),
     ("case\x00", LexItem::Keyword(LexKeyword::Case)),
@@ -174,6 +184,18 @@ pub enum LexItem {
     Increment,
     Decrement,
 
+    AddAssign,
+    SubAssign,
+    MulAssign,
+    DivAssign,
+    ModAssign,
+    LShiftAssign,
+    RShiftAssign,
+    AndAssign,
+    OrAssign,
+    XorAssign,
+    Assign,
+
     // Brackets
     LeftParen,
     RightParen,
@@ -188,4 +210,5 @@ pub enum LexItem {
     Colon,
     Comma,
     Period,
+    Question,
 }

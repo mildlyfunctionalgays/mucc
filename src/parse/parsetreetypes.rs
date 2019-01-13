@@ -85,7 +85,7 @@ impl From<&str> for ParseNodeType {
                 ParseNodeType::Lex(discriminant(&match_.1))
             }
         } else {
-            panic!()
+            panic!(format!(r#"The string "{}" does not match a token"#, value))
         }
     }
 }
