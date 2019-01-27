@@ -1,5 +1,6 @@
 use crate::lex::constants::{LexItem, NumberType};
 use crate::parse::parsetreetypes::ParseNodeType::{self, *};
+use lazy_static::lazy_static;
 use std::mem::discriminant;
 
 macro_rules! grammar {
@@ -41,13 +42,24 @@ macro_rules! grammar {
     (@eof $($tail:tt)*) => {
         vec![$($tail),*]
     };
-    (run $($tail:tt)*) => {
+    ($($tail:tt)*) => {
         grammar!(@beginline $($tail)* @eof)
     };
 }
 
+lazy_static! {
+    pub static ref RULES: &'static [(ParseNodeType, &'static [ParseNodeType])] = &*RULE_VEC_2;
+    static ref RULE_VEC_1: Vec<(ParseNodeType, Vec<ParseNodeType>)> = get_rules();
+    static ref RULE_VEC_2: Vec<(ParseNodeType, &'static [ParseNodeType])> = {
+        (*RULE_VEC_1)
+            .iter()
+            .map(|&(ref key, ref value)| (key.clone(), value.as_slice()))
+            .collect()
+    };
+}
+
 pub fn get_rules() -> Vec<(ParseNodeType, Vec<ParseNodeType>)> {
-    grammar!(run
+    grammar!(
         Start -> ε,
         Start -> TopStatement Start,
 

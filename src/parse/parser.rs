@@ -1,6 +1,5 @@
 #![allow(unused_variables)]
 use super::parsetreetypes::{ParseNode, ParseNodeType};
-use super::rules::get_rules;
 use crate::lex::constants::LexItem;
 use crate::lex::errors::{LexResult, LexSuccess};
 use std::cell::RefCell;
@@ -17,7 +16,7 @@ struct RuleState<'a> {
 }
 
 impl<'a> RuleState<'a> {
-    pub fn new_start(rules: &[(ParseNodeType, Vec<ParseNodeType>)]) -> RuleState {
+    pub fn new_start(rules: &[(ParseNodeType, &'a [ParseNodeType])]) -> RuleState<'a> {
         let rule = *search_rule(rules, &ParseNodeType::Start).first().unwrap();
         RuleState {
             result: ParseNodeType::Start,
@@ -39,13 +38,13 @@ struct ParserState<'a, T: Iterator<Item = LexResult>> {
 }
 
 fn search_rule<'a>(
-    rules: &'a [(ParseNodeType, Vec<ParseNodeType>)],
+    rules: &[(ParseNodeType, &'a [ParseNodeType])],
     request: &ParseNodeType,
-) -> Vec<&'a Vec<ParseNodeType>> {
+) -> Vec<&'a [ParseNodeType]> {
     rules
         .iter()
         .filter(|rule| rule.0 == *request)
-        .map(|rule| &rule.1)
+        .map(|rule| rule.1)
         .collect()
 }
 
@@ -58,11 +57,11 @@ fn next_success<T: Iterator<Item = LexResult>>(state: &mut ParserState<T>) -> Op
 }
 
 pub fn parse<T: Iterator<Item = LexResult>>(tokens: T) -> Rc<RefCell<ParseNode>> {
-    let rules = get_rules();
+    let rules = &*super::rules::RULES;
     let mut state = ParserState {
         it: tokens,
         lookahead: Vec::new(),
-        rule: RuleState::new_start(&rules),
+        rule: RuleState::new_start(rules),
     };
 
     'outer: loop {

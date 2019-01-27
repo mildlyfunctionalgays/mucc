@@ -1,4 +1,4 @@
-#![recursion_limit = "10000"]
+#![recursion_limit = "1000"]
 //#![feature(trace_macros)]
 #![allow(dead_code)]
 mod lex;
