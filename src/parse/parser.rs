@@ -17,7 +17,14 @@ struct RuleState<'a> {
 
 impl<'a> RuleState<'a> {
     pub fn new_start(rules: &[(ParseNodeType, &'a [ParseNodeType])]) -> RuleState<'a> {
-        let rule = *search_rule(rules, &ParseNodeType::Start).first().unwrap();
+        let rule = {
+            let rules = search_rule(rules, &ParseNodeType::Start);
+            if rules.len() > 2 {
+                panic!("There is more than one Start rule, which is not allowed.")
+            } else {
+                *rules.first().unwrap()
+            }
+        };
         RuleState {
             result: ParseNodeType::Start,
             rule,

@@ -60,8 +60,9 @@ lazy_static! {
 
 pub fn get_rules() -> Vec<(ParseNodeType, Vec<ParseNodeType>)> {
     grammar!(
-        Start -> ε,
-        Start -> TopStatement Start,
+        Start -> TopStatements,
+        TopStatements -> ε,
+        TopStatements -> TopStatement TopStatements,
 
         TopStatement -> Type MaybeIdentifier ";",
         TopStatement -> Typedef,

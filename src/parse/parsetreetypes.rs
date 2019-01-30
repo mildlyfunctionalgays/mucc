@@ -13,6 +13,7 @@ pub enum ParseNodeType {
     Keyword(Discriminant<LexKeyword>),
     RawLex(LexSuccess),
     Start, // There must only be one Start rule
+    TopStatements,
     TopStatement,
     FunctionPointer,
     Type,
