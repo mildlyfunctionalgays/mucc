@@ -1,7 +1,6 @@
 use crate::lex::constants::LexItem;
 use crate::lex::constants::LITERAL_TOKENS;
 use crate::lex::errors::LexSuccess;
-use std::cell::RefCell;
 use std::mem::discriminant;
 use std::mem::Discriminant;
 use std::rc::Rc;
@@ -100,7 +99,7 @@ impl From<LexSuccess> for ParseNodeType {
 #[derive(Clone, Debug)]
 pub struct ParseNode {
     pub node_type: ParseNodeType,
-    pub children: Vec<Rc<RefCell<ParseNode>>>,
+    pub children: Vec<Rc<ParseNode>>,
 }
 
 impl ParseNode {

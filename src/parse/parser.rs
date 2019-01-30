@@ -1,17 +1,27 @@
 #![allow(unused_variables)]
 use super::parsetreetypes::{ParseNode, ParseNodeType};
 use crate::lex::errors::{LexResult, LexSuccess};
-use std::cell::RefCell;
 use std::mem::discriminant;
 use std::rc::Rc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct RuleState<'a> {
-    pub result: ParseNodeType,
     pub rule: &'a [ParseNodeType],
-    pub position: usize,
     pub parent: Option<Rc<RuleState<'a>>>,
-    pub self_node: Rc<RefCell<ParseNode>>,
+    pub self_node: Rc<ParseNode>,
+}
+
+trait UnwrapOrClone {
+    type Item;
+    fn unwrap_or_clone(self) -> Self::Item;
+}
+
+impl<T: Clone> UnwrapOrClone for Rc<T> {
+    type Item = T;
+
+    fn unwrap_or_clone(self) -> T {
+        Rc::try_unwrap(self).unwrap_or_else(|rc|(*rc).clone())
+    }
 }
 
 impl<'a> RuleState<'a> {
@@ -25,14 +35,55 @@ impl<'a> RuleState<'a> {
             }
         };
         RuleState {
-            result: ParseNodeType::Start,
             rule,
-            position: 0,
             parent: None,
-            self_node: Rc::new(RefCell::new(ParseNode {
+            self_node: Rc::new(ParseNode {
                 node_type: ParseNodeType::Start,
-                children: vec![],
-            })),
+                children: Vec::new(),
+            }),
+        }
+    }
+    fn match_token(self, token: &LexSuccess, rules: &[(ParseNodeType, &'a [ParseNodeType])]) -> impl IntoIterator<Item=RuleState<'a>> {
+        let index = self.self_node.children.len();
+        if self.rule.len() == index {
+            return Vec::new();
+        }
+        let next_rule = &self.rule[index];
+        if let ParseNodeType::Lex(item) = next_rule {
+            if discriminant(&token.item) == *item {
+                let mut node = Rc::unwrap_or_clone(self.self_node);
+                node.children.push(Rc::new(ParseNode {
+                    node_type: ParseNodeType::RawLex(token.clone()),
+                    children: vec![]
+                }));
+                let state = RuleState {
+                    rule: self.rule,
+                    parent: self.parent,
+                    self_node: Rc::new(node),
+                };
+                if state.self_node.children.len() == state.rule.len() {
+                    unimplemented!()
+                }
+                vec![state]
+            } else {
+                Vec::new()
+            }
+        } else {
+            let matched_rules = search_rule(rules, next_rule);
+
+            let self_rc = Rc::new(self);
+
+            matched_rules.into_iter().map(|rule| {
+                RuleState {
+                    rule,
+                    parent: Some(self_rc.clone()),
+                    self_node: Rc::new(ParseNode {
+                        node_type: next_rule.clone(),
+                        children: Vec::new(),
+                    })
+                }
+            }).map(|rule_state| rule_state.match_token(token, rules))
+                .flatten().collect()
         }
     }
 }
@@ -62,73 +113,35 @@ fn next_success<T: Iterator<Item = LexResult>>(state: &mut ParserState<T>) -> Op
     next_tok(state)?.ok()
 }
 
-pub fn parse<T: Iterator<Item = LexResult>>(tokens: T) -> Rc<RefCell<ParseNode>> {
+pub fn parse<T: Iterator<Item = LexResult>>(mut tokens: T) -> Rc<ParseNode> {
     let rules = &*super::rules::RULES;
-    let mut state = ParserState {
-        it: tokens,
-        lookahead: Vec::new(),
-        rule: RuleState::new_start(rules),
-    };
 
-    'outer: loop {
-        while state.rule.position == state.rule.rule.len() {
-            state.rule = ((if let Some(parent) = state.rule.parent {
-                parent
-            } else {
-                break 'outer;
-            })
-            .as_ref())
-            .clone();
-            state.rule.position += 1;
-        }
+    let mut states = vec![RuleState::new_start(rules)];
 
-        let needed = &state.rule.rule[state.rule.position];
-
-        if let ParseNodeType::Lex(ref lex_req) = needed {
-            let tok = if let Some(tok) = next_success(&mut state) {
-                tok
+    loop {
+        let token = {
+            if let Some(token) = tokens.next() {
+                token.ok().unwrap()
             } else {
-                break 'outer;
-            };
-            if discriminant(&tok.item) == *lex_req {
-                let mut node = state.rule.self_node.borrow_mut();
-                node.children
-                    .push(Rc::new(RefCell::new(ParseNode::from_lex(tok))));
-                continue;
-            } else {
-                panic!(
-                    "Unexpected {:?} at line {} column {}",
-                    tok.item, tok.line, tok.column
-                );
+                break
             }
-        }
+        };
 
-        let new_rules = search_rule(&rules, needed);
-        if new_rules.len() > 1 {
-            unimplemented!()
-        } else if let Some(rule) = new_rules.first() {
-            state.rule = RuleState {
-                result: needed.clone(),
-                rule: &rule,
-                position: 0,
-                parent: Some(Rc::new(state.rule)),
-                self_node: Rc::new(RefCell::new(ParseNode {
-                    node_type: needed.clone(),
-                    children: vec![],
-                })),
-            };
-            if let Some(ref parent_rule) = state.rule.parent {
-                let mut parent_node = parent_rule.self_node.borrow_mut();
-                parent_node.children.push(state.rule.self_node.clone());
-            }
-        } else {
-            panic!(format!("No such rule for {:?}", *needed))
+        let mut new_states = Vec::new();
+        for state in states {
+            new_states.extend(state.match_token(&token, rules));
         }
+        states = new_states;
     }
 
-    if state.rule.parent.is_none() {
-        state.rule.self_node
+    if states.len() > 1 {
+        unimplemented!()
+    } else if let Some(state) = states.into_iter().next() {
+        if state.parent.is_some() {
+            unimplemented!()
+        }
+        state.self_node
     } else {
-        panic!("Did not finish parsing, more tokens needed")
+        unimplemented!()
     }
 }
