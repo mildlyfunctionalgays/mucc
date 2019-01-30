@@ -20,8 +20,8 @@ fn main() -> std::io::Result<()> {
     let mut code = String::new();
     file.read_to_string(&mut code)?;
 
-    let mut chars = code.chars();
-    let tokens = Lexer::new(&mut chars);
+    let chars = code.chars();
+    let tokens = Lexer::new(chars);
 
     let tree = parse(tokens);
     println!("Got tree {:?}", tree);
