@@ -59,7 +59,13 @@ where
     }
 
     fn next_chars(&mut self, n: usize) -> Option<String> {
-        (0..n).map(|_| self.next_char()).collect::<Option<String>>()
+        let next = (0..n).filter_map(|_| self.next_char()).collect::<String>();
+        if next.len() < n {
+            self.nextnt_string(&next);
+            None
+        } else {
+            Some(next)
+        }
     }
 
     fn skip_chars(&mut self, chars: &str) -> Option<char> {
@@ -71,7 +77,20 @@ where
         }
     }
     fn next_after_whitespace(&mut self) -> Option<char> {
-        self.skip_chars(" \n\t\r")
+        let ch = self.skip_chars(" \n\t\r")?;
+        self.nextnt(ch);
+
+        let next = self.next_chars(2);
+
+        if next.as_ref().map(|s| s.as_str()) == Some("//") {
+            while self.next_char()? != '\n' {}
+            self.next_after_whitespace()
+        } else {
+            if let Some(next) = next {
+                self.nextnt_string(&next);
+            }
+            self.next_char()
+        }
     }
     fn nextnt(&mut self, ch: char) {
         match ch {

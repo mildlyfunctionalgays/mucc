@@ -211,3 +211,8 @@ fn test_lexer_location() {
         ]
     );
 }
+
+#[test]
+fn test_lexer_comment() {
+    test_lexer_str("//hi!!", &[]);
+}

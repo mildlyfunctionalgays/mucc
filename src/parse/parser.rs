@@ -20,7 +20,7 @@ impl<T: Clone> UnwrapOrClone for Rc<T> {
     type Item = T;
 
     fn unwrap_or_clone(self) -> T {
-        Rc::try_unwrap(self).unwrap_or_else(|rc|(*rc).clone())
+        Rc::try_unwrap(self).unwrap_or_else(|rc| (*rc).clone())
     }
 }
 
@@ -43,47 +43,77 @@ impl<'a> RuleState<'a> {
             }),
         }
     }
-    fn match_token(self, token: &LexSuccess, rules: &[(ParseNodeType, &'a [ParseNodeType])]) -> impl IntoIterator<Item=RuleState<'a>> {
+    fn match_token(
+        self,
+        token: &LexSuccess,
+        rules: &[(ParseNodeType, &'a [ParseNodeType])],
+    ) -> Option<RuleState<'a>> {
         let index = self.self_node.children.len();
         if self.rule.len() == index {
-            return Vec::new();
+            return None;
         }
         let next_rule = &self.rule[index];
         if let ParseNodeType::Lex(item) = next_rule {
             if discriminant(&token.item) == *item {
-                let mut node = Rc::unwrap_or_clone(self.self_node);
+                let mut state = self;
+                let node = Rc::make_mut(&mut state.self_node);
                 node.children.push(Rc::new(ParseNode {
                     node_type: ParseNodeType::RawLex(token.clone()),
-                    children: vec![]
+                    children: Vec::new(),
                 }));
-                let state = RuleState {
-                    rule: self.rule,
-                    parent: self.parent,
-                    self_node: Rc::new(node),
-                };
-                if state.self_node.children.len() == state.rule.len() {
-                    unimplemented!()
-                }
-                vec![state]
+                Some(state)
             } else {
-                Vec::new()
+                None
             }
+        } else {
+            unreachable!();
+        }
+    }
+    fn move_forward(
+        mut self,
+        rules: &[(ParseNodeType, &'a [ParseNodeType])],
+    ) -> impl IntoIterator<Item = RuleState<'a>> {
+        while self.self_node.children.len() == self.rule.len() {
+            let RuleState {
+                rule,
+                parent,
+                self_node,
+            } = self;
+
+            if let Some(parent) = parent {
+                self = Rc::unwrap_or_clone(parent);
+                let new_node = Rc::make_mut(&mut self.self_node);
+                new_node.children.push(self_node);
+            } else {
+                self = RuleState {
+                    rule,
+                    parent: None,
+                    self_node,
+                };
+                return vec![self];
+            }
+        }
+        let next_rule = &self.rule[self.self_node.children.len()];
+        if let ParseNodeType::Lex(item) = next_rule {
+            vec![self]
         } else {
             let matched_rules = search_rule(rules, next_rule);
 
             let self_rc = Rc::new(self);
 
-            matched_rules.into_iter().map(|rule| {
-                RuleState {
+            matched_rules
+                .into_iter()
+                .map(|rule| RuleState {
                     rule,
                     parent: Some(self_rc.clone()),
                     self_node: Rc::new(ParseNode {
                         node_type: next_rule.clone(),
                         children: Vec::new(),
-                    })
-                }
-            }).map(|rule_state| rule_state.match_token(token, rules))
-                .flatten().collect()
+                    }),
+                })
+                .map(|rule_state| rule_state.move_forward(rules))
+                .flatten()
+                .collect()
         }
     }
 }
@@ -116,27 +146,46 @@ fn next_success<T: Iterator<Item = LexResult>>(state: &mut ParserState<T>) -> Op
 pub fn parse<T: Iterator<Item = LexResult>>(mut tokens: T) -> Rc<ParseNode> {
     let rules = &*super::rules::RULES;
 
-    let mut states = vec![RuleState::new_start(rules)];
+    let mut states: Vec<RuleState> = vec![RuleState::new_start(rules)];
 
     loop {
+        print!("{} ", states.len());
+        //println!("{:#?}", states);
+        states = states
+            .into_iter()
+            .flat_map(|state| state.move_forward(rules))
+            .collect();
+        println!("{}", states.len());
+
         let token = {
             if let Some(token) = tokens.next() {
                 token.ok().unwrap()
             } else {
-                break
+                break;
             }
         };
 
-        let mut new_states = Vec::new();
-        for state in states {
-            new_states.extend(state.match_token(&token, rules));
-        }
-        states = new_states;
+        states = states
+            .into_iter()
+            .filter_map(|state| state.match_token(&token, rules))
+            .collect();
     }
 
+    states = states
+        .into_iter()
+        .flat_map(|state| state.move_forward(rules))
+        .collect();
+
+    states = states
+        .into_iter()
+        .filter(|state| state.self_node.children.len() == state.rule.len())
+        .collect();
+
     if states.len() > 1 {
+        println!("{:#?}", states);
         unimplemented!()
     } else if let Some(state) = states.into_iter().next() {
+        println!("{:#?}", state);
         if state.parent.is_some() {
             unimplemented!()
         }
