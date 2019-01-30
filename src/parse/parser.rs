@@ -1,6 +1,5 @@
 #![allow(unused_variables)]
 use super::parsetreetypes::{ParseNode, ParseNodeType};
-use crate::lex::constants::LexItem;
 use crate::lex::errors::{LexResult, LexSuccess};
 use std::cell::RefCell;
 use std::mem::discriminant;
@@ -101,31 +100,6 @@ pub fn parse<T: Iterator<Item = LexResult>>(tokens: T) -> Rc<RefCell<ParseNode>>
                     "Unexpected {:?} at line {} column {}",
                     tok.item, tok.line, tok.column
                 );
-            }
-        } else if let ParseNodeType::Keyword(ref kw_req) = needed {
-            let tok = if let Some(tok) = next_success(&mut state) {
-                tok
-            } else {
-                break 'outer;
-            };
-
-            if let LexItem::Keyword(ref tok_kw) = tok.item {
-                if discriminant(tok_kw) == *kw_req {
-                    let mut node = state.rule.self_node.borrow_mut();
-                    node.children
-                        .push(Rc::new(RefCell::new(ParseNode::from_lex(tok))));
-                    continue;
-                } else {
-                    panic!(
-                        "Unexpected {:?} at line {} column {}",
-                        &tok.item, tok.line, tok.column
-                    );
-                }
-            } else {
-                panic!(
-                    "Expected keyword {:?}, found {:?} at line {} column {}",
-                    kw_req, tok.item, tok.line, tok.column
-                )
             }
         }
 

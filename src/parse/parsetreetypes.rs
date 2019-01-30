@@ -1,5 +1,4 @@
 use crate::lex::constants::LexItem;
-use crate::lex::constants::LexKeyword;
 use crate::lex::constants::LITERAL_TOKENS;
 use crate::lex::errors::LexSuccess;
 use std::cell::RefCell;
@@ -10,7 +9,6 @@ use std::rc::Rc;
 #[derive(Debug, PartialEq, Clone)]
 pub enum ParseNodeType {
     Lex(Discriminant<LexItem>),
-    Keyword(Discriminant<LexKeyword>),
     RawLex(LexSuccess),
     Start, // There must only be one Start rule
     TopStatements,
@@ -80,11 +78,7 @@ impl From<&str> for ParseNodeType {
             .iter()
             .find(|(key, _)| key.trim_end_matches('\x00') == value);
         if let Some(match_) = match_ {
-            if let LexItem::Keyword(keyword) = &match_.1 {
-                ParseNodeType::Keyword(discriminant(keyword))
-            } else {
-                ParseNodeType::Lex(discriminant(&match_.1))
-            }
+            ParseNodeType::Lex(discriminant(&match_.1))
         } else {
             panic!(format!(r#"The string "{}" does not match a token"#, value))
         }
@@ -97,19 +91,9 @@ impl From<Discriminant<LexItem>> for ParseNodeType {
     }
 }
 
-impl From<Discriminant<LexKeyword>> for ParseNodeType {
-    fn from(value: Discriminant<LexKeyword>) -> Self {
-        ParseNodeType::Keyword(value)
-    }
-}
-
 impl From<LexSuccess> for ParseNodeType {
     fn from(value: LexSuccess) -> Self {
-        if let LexItem::Keyword(kw) = value.item {
-            ParseNodeType::Keyword(discriminant(&kw))
-        } else {
-            ParseNodeType::Lex(discriminant(&value.item))
-        }
+        ParseNodeType::Lex(discriminant(&value.item))
     }
 }
 

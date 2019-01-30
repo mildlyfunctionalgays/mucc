@@ -1,6 +1,5 @@
 use super::constants::{LexItem, NumberType};
 use super::lexer::Lexer;
-use crate::lex::constants::LexKeyword;
 use crate::lex::errors::LexError;
 
 #[cfg(test)]
@@ -81,11 +80,8 @@ fn test_lexer_valid_char_literal() {
 
 #[test]
 fn test_lexer_while_keyword() {
-    test_lexer_str("while", &[LexItem::Keyword(LexKeyword::While)]);
-    test_lexer_str(
-        "while[",
-        &[LexItem::Keyword(LexKeyword::While), LexItem::LeftBracket],
-    );
+    test_lexer_str("while", &[LexItem::While]);
+    test_lexer_str("while[", &[LexItem::While, LexItem::LeftBracket]);
 }
 
 #[test]
@@ -153,20 +149,20 @@ fn test_lexer_function_definition() {
     test_lexer_str(
         "int main(int argc, char *argv[]) {\n\treturn 0;\n}",
         &[
-            LexItem::Keyword(LexKeyword::Int),
+            LexItem::Int,
             LexItem::Identifier("main".to_string()),
             LexItem::LeftParen,
-            LexItem::Keyword(LexKeyword::Int),
+            LexItem::Int,
             LexItem::Identifier("argc".to_string()),
             LexItem::Comma,
-            LexItem::Keyword(LexKeyword::Char),
+            LexItem::Char,
             LexItem::Mul,
             LexItem::Identifier("argv".to_string()),
             LexItem::LeftBracket,
             LexItem::RightBracket,
             LexItem::RightParen,
             LexItem::LeftCurlyBrace,
-            LexItem::Keyword(LexKeyword::Return),
+            LexItem::Return,
             LexItem::NumericLiteral(NumberType::SignedInt(0)),
             LexItem::Semicolon,
             LexItem::RightCurlyBrace,
