@@ -1,14 +1,28 @@
 use crate::lex::errors::LexResult;
 use crate::lex::lexer::Lexer;
 use crate::parse::parser::parse;
+use crate::parse::parsetreetypes::NonTerminalType;
+use crate::parse::parsetreetypes::ParseNode;
+use crate::parse::parsetreetypes::ParseNodeType;
 use std::io::Write;
 use std::process::Command;
 use std::process::Stdio;
+use std::rc::Rc;
 
 #[test]
 fn test_parse_empty() {
     let text = "\n";
-    let _parse = parse(Lexer::new(text.chars()));
+    let parsed = parse(Lexer::new(text.chars()));
+    assert_eq!(
+        parsed,
+        Rc::new(ParseNode {
+            node_type: ParseNodeType::NonTerminal(NonTerminalType::Start),
+            children: vec![Rc::new(ParseNode {
+                node_type: ParseNodeType::NonTerminal(NonTerminalType::TopStatements),
+                children: vec![]
+            })]
+        })
+    )
 }
 
 #[test]

@@ -6,9 +6,19 @@ use std::mem::Discriminant;
 use std::rc::Rc;
 
 #[derive(Debug, PartialEq, Clone)]
+pub enum RuleType {
+    Terminal(Discriminant<LexItem>),
+    NonTerminal(NonTerminalType),
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum ParseNodeType {
-    Lex(Discriminant<LexItem>),
-    RawLex(LexSuccess),
+    Terminal(LexSuccess),
+    NonTerminal(NonTerminalType),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum NonTerminalType {
     Start, // There must only be one Start rule
     TopStatements,
     TopStatement,
@@ -86,32 +96,38 @@ pub enum ParseNodeType {
     Members,
 }
 
-impl From<&str> for ParseNodeType {
+impl From<&str> for RuleType {
     fn from(value: &str) -> Self {
         let match_: Option<&(&str, LexItem)> = LITERAL_TOKENS
             .iter()
             .find(|(key, _)| key.trim_end_matches('\x00') == value);
         if let Some(match_) = match_ {
-            ParseNodeType::Lex(discriminant(&match_.1))
+            RuleType::Terminal(discriminant(&match_.1))
         } else {
             panic!(format!(r#"The string "{}" does not match a token"#, value))
         }
     }
 }
 
-impl From<Discriminant<LexItem>> for ParseNodeType {
+impl From<Discriminant<LexItem>> for RuleType {
     fn from(value: Discriminant<LexItem>) -> Self {
-        ParseNodeType::Lex(value)
+        RuleType::Terminal(value)
+    }
+}
+
+impl From<LexSuccess> for RuleType {
+    fn from(value: LexSuccess) -> Self {
+        RuleType::Terminal(discriminant(&value.item))
     }
 }
 
 impl From<LexSuccess> for ParseNodeType {
     fn from(value: LexSuccess) -> Self {
-        ParseNodeType::Lex(discriminant(&value.item))
+        ParseNodeType::Terminal(value)
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ParseNode {
     pub node_type: ParseNodeType,
     pub children: Vec<Rc<ParseNode>>,
@@ -120,7 +136,7 @@ pub struct ParseNode {
 impl ParseNode {
     pub fn from_lex(lex: LexSuccess) -> Self {
         ParseNode {
-            node_type: ParseNodeType::RawLex(lex),
+            node_type: ParseNodeType::Terminal(lex),
             children: Vec::new(),
         }
     }

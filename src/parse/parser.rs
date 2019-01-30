@@ -1,12 +1,14 @@
 #![allow(unused_variables)]
 use super::parsetreetypes::{ParseNode, ParseNodeType};
 use crate::lex::errors::{LexResult, LexSuccess};
+use crate::parse::parsetreetypes::NonTerminalType;
+use crate::parse::parsetreetypes::RuleType;
 use std::mem::discriminant;
 use std::rc::Rc;
 
 #[derive(Clone, Debug)]
 struct RuleState<'a> {
-    pub rule: &'a [ParseNodeType],
+    pub rule: &'a [RuleType],
     pub parent: Option<Rc<RuleState<'a>>>,
     pub self_node: Rc<ParseNode>,
 }
@@ -25,9 +27,9 @@ impl<T: Clone> UnwrapOrClone for Rc<T> {
 }
 
 impl<'a> RuleState<'a> {
-    pub fn new_start(rules: &[(ParseNodeType, &'a [ParseNodeType])]) -> RuleState<'a> {
+    pub fn new_start(rules: &[(NonTerminalType, &'a [RuleType])]) -> RuleState<'a> {
         let rule = {
-            let rules = search_rule(rules, &ParseNodeType::Start);
+            let rules = search_rule(rules, &NonTerminalType::Start);
             if rules.len() > 2 {
                 panic!("There is more than one Start rule, which is not allowed.")
             } else {
@@ -38,7 +40,7 @@ impl<'a> RuleState<'a> {
             rule,
             parent: None,
             self_node: Rc::new(ParseNode {
-                node_type: ParseNodeType::Start,
+                node_type: ParseNodeType::NonTerminal(NonTerminalType::Start),
                 children: Vec::new(),
             }),
         }
@@ -46,19 +48,19 @@ impl<'a> RuleState<'a> {
     fn match_token(
         self,
         token: &LexSuccess,
-        rules: &[(ParseNodeType, &'a [ParseNodeType])],
+        rules: &[(NonTerminalType, &'a [RuleType])],
     ) -> Option<RuleState<'a>> {
         let index = self.self_node.children.len();
         if self.rule.len() == index {
             return None;
         }
         let next_rule = &self.rule[index];
-        if let ParseNodeType::Lex(item) = next_rule {
+        if let RuleType::Terminal(item) = next_rule {
             if discriminant(&token.item) == *item {
                 let mut state = self;
                 let node = Rc::make_mut(&mut state.self_node);
                 node.children.push(Rc::new(ParseNode {
-                    node_type: ParseNodeType::RawLex(token.clone()),
+                    node_type: ParseNodeType::Terminal(token.clone()),
                     children: Vec::new(),
                 }));
                 Some(state)
@@ -71,7 +73,7 @@ impl<'a> RuleState<'a> {
     }
     fn move_forward(
         mut self,
-        rules: &[(ParseNodeType, &'a [ParseNodeType])],
+        rules: &[(NonTerminalType, &'a [RuleType])],
     ) -> impl IntoIterator<Item = RuleState<'a>> {
         while self.self_node.children.len() == self.rule.len() {
             let RuleState {
@@ -94,26 +96,27 @@ impl<'a> RuleState<'a> {
             }
         }
         let next_rule = &self.rule[self.self_node.children.len()];
-        if let ParseNodeType::Lex(item) = next_rule {
-            vec![self]
-        } else {
-            let matched_rules = search_rule(rules, next_rule);
+        match next_rule {
+            RuleType::Terminal(item) => vec![self],
+            RuleType::NonTerminal(needed) => {
+                let matched_rules = search_rule(rules, needed);
 
-            let self_rc = Rc::new(self);
+                let self_rc = Rc::new(self);
 
-            matched_rules
-                .into_iter()
-                .map(|rule| RuleState {
-                    rule,
-                    parent: Some(self_rc.clone()),
-                    self_node: Rc::new(ParseNode {
-                        node_type: next_rule.clone(),
-                        children: Vec::new(),
-                    }),
-                })
-                .map(|rule_state| rule_state.move_forward(rules))
-                .flatten()
-                .collect()
+                matched_rules
+                    .into_iter()
+                    .map(|rule| RuleState {
+                        rule,
+                        parent: Some(self_rc.clone()),
+                        self_node: Rc::new(ParseNode {
+                            node_type: ParseNodeType::NonTerminal(needed.clone()),
+                            children: Vec::new(),
+                        }),
+                    })
+                    .map(|rule_state| rule_state.move_forward(rules))
+                    .flatten()
+                    .collect()
+            }
         }
     }
 }
@@ -125,9 +128,9 @@ struct ParserState<'a, T: Iterator<Item = LexResult>> {
 }
 
 fn search_rule<'a>(
-    rules: &[(ParseNodeType, &'a [ParseNodeType])],
-    request: &ParseNodeType,
-) -> Vec<&'a [ParseNodeType]> {
+    rules: &[(NonTerminalType, &'a [RuleType])],
+    request: &NonTerminalType,
+) -> Vec<&'a [RuleType]> {
     rules
         .iter()
         .filter(|rule| rule.0 == *request)

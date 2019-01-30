@@ -1,27 +1,30 @@
 use crate::lex::constants::{LexItem, NumberType};
-use crate::parse::parsetreetypes::ParseNodeType::{self, *};
+use crate::parse::parsetreetypes::{
+    NonTerminalType::{self, *},
+    RuleType,
+};
 use lazy_static::lazy_static;
 use std::mem::discriminant;
 
 macro_rules! grammar {
     (@token StringLiteral) => {
-        ParseNodeType::Lex(discriminant(&LexItem::StringLiteral(Vec::new())))
+        RuleType::Terminal(discriminant(&LexItem::StringLiteral(Vec::new())))
     };
     (@token StringLiteral) => {
-        ParseNodeType::Lex(discriminant(&LexItem::StringLiteral(Vec::new())))
+        RuleType::Terminal(discriminant(&LexItem::StringLiteral(Vec::new())))
     };
     (@token Identifier) => {
-        ParseNodeType::Lex(discriminant(&LexItem::Identifier(String::new())))
+        RuleType::Terminal(discriminant(&LexItem::Identifier(String::new())))
     };
     (@token NumericLiteral) => {
-        ParseNodeType::Lex(discriminant(&LexItem::NumericLiteral(NumberType::default())))
+        RuleType::Terminal(discriminant(&LexItem::NumericLiteral(NumberType::default())))
     };
     (@token $token:ident) => {
-        $token
+        RuleType::NonTerminal($token)
     };
     (@token $token:tt) => {
         {
-            ParseNodeType::from($token)
+            RuleType::from($token)
         }
     };
     (@beginline @eof $($tail:tt)*) => {
@@ -48,9 +51,9 @@ macro_rules! grammar {
 }
 
 lazy_static! {
-    pub static ref RULES: &'static [(ParseNodeType, &'static [ParseNodeType])] = &*RULE_VEC_2;
-    static ref RULE_VEC_1: Vec<(ParseNodeType, Vec<ParseNodeType>)> = get_rules();
-    static ref RULE_VEC_2: Vec<(ParseNodeType, &'static [ParseNodeType])> = {
+    pub static ref RULES: &'static [(NonTerminalType, &'static [RuleType])] = &*RULE_VEC_2;
+    static ref RULE_VEC_1: Vec<(NonTerminalType, Vec<RuleType>)> = get_rules();
+    static ref RULE_VEC_2: Vec<(NonTerminalType, &'static [RuleType])> = {
         (*RULE_VEC_1)
             .iter()
             .map(|&(ref key, ref value)| (key.clone(), value.as_slice()))
@@ -58,7 +61,7 @@ lazy_static! {
     };
 }
 
-pub fn get_rules() -> Vec<(ParseNodeType, Vec<ParseNodeType>)> {
+pub fn get_rules() -> Vec<(NonTerminalType, Vec<RuleType>)> {
     grammar!(
         Start -> TopStatements,
         TopStatements -> ε,
