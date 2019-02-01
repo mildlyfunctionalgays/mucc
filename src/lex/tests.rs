@@ -1,12 +1,12 @@
 use super::constants::{LexItem, NumberType};
 use super::lexer::Lexer;
-use crate::lex::errors::LexError;
+use crate::lex::errors::LexErrorType;
 
 #[cfg(test)]
 fn test_lexer_str(s: &str, tokens: &[LexItem]) {
     let lexer = Lexer::new(s.chars());
 
-    let vec = lexer.map(|res| res.item.unwrap()).collect::<Vec<_>>();
+    let vec = lexer.map(|res| res.unwrap().item).collect::<Vec<_>>();
 
     println!("got symbols {:?}", vec);
 
@@ -14,10 +14,15 @@ fn test_lexer_str(s: &str, tokens: &[LexItem]) {
 }
 
 #[cfg(test)]
-fn test_lexer_str_error(s: &str, tokens: &[Result<LexItem, LexError>]) {
+fn test_lexer_str_error(s: &str, tokens: &[Result<LexItem, LexErrorType>]) {
     let lexer = Lexer::new(s.chars());
 
-    let vec = lexer.map(|res| res.item).collect::<Vec<_>>();
+    let vec = lexer
+        .map(|res| {
+            res.map(|success| success.item)
+                .map_err(|err| err.error_type)
+        })
+        .collect::<Vec<_>>();
 
     println!("got symbols {:?}", vec);
 
@@ -26,7 +31,7 @@ fn test_lexer_str_error(s: &str, tokens: &[Result<LexItem, LexError>]) {
 
 #[test]
 fn test_lexer_error_invalid_size_literal() {
-    test_lexer_str_error("0ulll", &[Err(LexError::InvalidSize(256))]);
+    test_lexer_str_error("0ulll", &[Err(LexErrorType::InvalidSize(256))]);
 }
 
 #[test]
@@ -86,9 +91,9 @@ fn test_lexer_while_keyword() {
 
 #[test]
 fn test_lexer_invalid_char_literal() {
-    test_lexer_str("'", &[]);
-    test_lexer_str("''", &[]);
-    test_lexer_str("'\\\\", &[]);
+    test_lexer_str_error("'", &[Err(LexErrorType::Unfinished("'".to_string()))]);
+    test_lexer_str_error("''", &[Err(LexErrorType::InvalidLiteral("''".to_string()))]);
+    test_lexer_str_error("'\\\\", &[Err(LexErrorType::Unfinished("'\\".to_string()))]);
 }
 
 #[test]
@@ -187,7 +192,12 @@ fn test_lexer_string_literal() {
 fn test_lexer_location() {
     let s = "int main(int argc, char *argv[]) {\n\treturn 0;\n}";
     let lexer = Lexer::new(s.chars());
-    let vec = lexer.map(|res| (res.line, res.column)).collect::<Vec<_>>();
+    let vec = lexer
+        .map(|res| {
+            res.map(|success| (success.line, success.column))
+                .unwrap_or_else(|err| (err.location.line, err.location.column))
+        })
+        .collect::<Vec<_>>();
     assert_eq!(
         vec,
         vec![

@@ -1,6 +1,9 @@
 pub use super::constants::*;
 use crate::lex::errors::LexError;
+use crate::lex::errors::LexErrorType;
 use crate::lex::errors::LexResult;
+use crate::lex::errors::LexSuccess;
+use crate::lex::errors::Location;
 use std::char;
 use std::iter::Iterator;
 use std::str::FromStr;
@@ -146,61 +149,83 @@ where
                         }
                 })
                 .max_by_key(|(key, _)| key.len());
-            if let Some((key, value)) = largest_match {
+            return if let Some((key, value)) = largest_match {
                 self.nextnt_string(&token[key.trim_end_matches('\x00').len()..]);
-                break self.ok_token(value.clone());
+                Some(self.ok_token(value.clone()))
             } else {
                 self.nextnt_string(&token);
-                return None;
-            }
+                None
+            };
         }
     }
 
-    fn parse_char_literal(&mut self) -> Option<LexResult> {
-        let r: Option<u32> = match self.next_char()? {
-            '\'' => None,
-            '\\' => match self.next_char()? {
-                'n' => Some('\n' as u32),
-                't' => Some('\t' as u32),
-                'r' => Some('\r' as u32),
-                '\\' => Some('\\' as u32),
-                '\'' => Some('\'' as u32),
-                'x' => u32::from_str_radix(&self.next_chars(2)?, 16).ok(),
+    fn parse_char_literal(&mut self) -> LexResult {
+        let r = match self
+            .next_char()
+            .ok_or_else(|| self.error_token(LexErrorType::Unfinished("'".to_string())))?
+        {
+            '\'' => return Err(self.error_token(LexErrorType::InvalidLiteral("''".to_string()))),
+            '\\' => match self
+                .next_char()
+                .ok_or_else(|| self.error_token(LexErrorType::Unfinished("'\\".to_string())))?
+            {
+                'n' => '\n' as u32,
+                't' => '\t' as u32,
+                'r' => '\r' as u32,
+                '\\' => '\\' as u32,
+                '\'' => '\'' as u32,
+                'x' => u32::from_str_radix(
+                    &self.next_chars(2).ok_or_else(|| {
+                        self.error_token(LexErrorType::Unfinished("'\\x".to_string()))
+                    })?,
+                    16,
+                )
+                .map_err(|_| self.error_token(LexErrorType::InvalidEscape(unimplemented!())))?,
                 _ => unimplemented!(),
             },
-            ch => Some(ch as u32),
+            ch => ch as u32,
         };
-        if self.next_char()? == '\'' {
-            self.ok_token(LexItem::NumericLiteral(NumberType::UnsignedInt(r?)))
+        let next = self.next_char().ok_or_else(|| {
+            self.error_token(LexErrorType::Unfinished(format!(
+                "'{}",
+                char::from_u32(r).unwrap()
+            )))
+        })?;
+        if next == '\'' {
+            self.ok_token(LexItem::NumericLiteral(NumberType::UnsignedInt(r)))
         } else {
-            None
+            unimplemented!()
         }
     }
 
-    fn ok_token(&self, token: LexItem) -> Option<LexResult> {
-        Some(LexResult {
-            item: Ok(token),
+    fn ok_token(&self, token: LexItem) -> LexResult {
+        Ok(LexSuccess {
+            item: token,
             line: self.start_line,
             column: self.start_column,
         })
     }
 
-    fn error_token(&self, token: LexError) -> Option<LexResult> {
-        Some(LexResult {
-            item: Err(token),
-            line: self.start_line,
-            column: self.start_column,
-        })
+    fn error_token(&self, token: LexErrorType) -> LexError {
+        LexError {
+            error_type: token,
+            location: Location {
+                line: self.start_line,
+                column: self.start_column,
+            },
+        }
     }
 
-    fn parse_type_specifier(&mut self, num: u128) -> Option<LexResult> {
+    fn parse_type_specifier(&mut self, num: u128) -> LexResult {
         let mut signed = true;
         let mut size = 32usize;
         while let Some(ch) = self.next_char() {
             match ch.to_ascii_lowercase() {
                 'u' => signed = false,
                 'l' => size <<= 1,
-                'a'...'z' => return self.error_token(LexError::InvalidLiteral(format!("'{}'", ch))),
+                'a'...'z' => {
+                    return Err(self.error_token(LexErrorType::InvalidLiteral(format!("'{}'", ch))));
+                }
                 _ => {
                     self.nextnt(ch);
                     break;
@@ -208,24 +233,20 @@ where
             }
         }
         let nt = match (size, signed) {
-            (8, false) => Some(NumberType::UnsignedChar(num as u8)),
-            (8, true) => Some(NumberType::SignedChar(num as i8)),
-            (16, false) => Some(NumberType::UnsignedShort(num as u16)),
-            (16, true) => Some(NumberType::SignedShort(num as i16)),
-            (32, false) => Some(NumberType::UnsignedInt(num as u32)),
-            (32, true) => Some(NumberType::SignedInt(num as i32)),
-            (64, false) => Some(NumberType::UnsignedLong(num as u64)),
-            (64, true) => Some(NumberType::SignedLong(num as i64)),
-            (128, false) => Some(NumberType::UnsignedLongLong(num as u128)),
-            (128, true) => Some(NumberType::SignedLongLong(num as i128)),
-            _ => None,
+            (8, false) => NumberType::UnsignedChar(num as u8),
+            (8, true) => NumberType::SignedChar(num as i8),
+            (16, false) => NumberType::UnsignedShort(num as u16),
+            (16, true) => NumberType::SignedShort(num as i16),
+            (32, false) => NumberType::UnsignedInt(num as u32),
+            (32, true) => NumberType::SignedInt(num as i32),
+            (64, false) => NumberType::UnsignedLong(num as u64),
+            (64, true) => NumberType::SignedLong(num as i64),
+            (128, false) => NumberType::UnsignedLongLong(num as u128),
+            (128, true) => NumberType::SignedLongLong(num as i128),
+            _ => return Err(self.error_token(LexErrorType::InvalidSize(size))),
         };
 
-        if let Some(n) = nt {
-            self.ok_token(LexItem::NumericLiteral(n))
-        } else {
-            self.error_token(LexError::InvalidSize(size))
-        }
+        self.ok_token(LexItem::NumericLiteral(nt))
     }
 }
 
@@ -239,7 +260,7 @@ where
         self.set_start_pos()?;
         self.next_regular_token().or_else(|| {
             let mut ch = self.next_after_whitespace()?;
-            match ch {
+            Some(match ch {
                 '"' => {
                     let mut s = String::new();
                     loop {
@@ -352,7 +373,7 @@ where
                 '\'' => self.parse_char_literal(),
                 _ => {
                     if INVALID_IDENTIFIER_CHARS.chars().any(|c| c == ch) {
-                        None
+                        unimplemented!()
                     } else {
                         let mut ident = String::new();
                         ident.push(ch);
@@ -368,7 +389,7 @@ where
                         self.ok_token(LexItem::Identifier(ident))
                     }
                 }
-            }
+            })
         })
     }
 }
