@@ -39,7 +39,11 @@ fn main() -> std::io::Result<()> {
 
 #[cfg(fuzzing)]
 fn main() {
-    fuzz!(|data| if let Ok(text) = std::str::from_utf8(data) {
-        Lexer::new(text.chars()).for_each(drop);
+
+    fuzz!(|data| {
+        // Comment to prevent rustfmt from BREAKING this code
+        if let Ok(text) = std::str::from_utf8(data) {
+            Lexer::new(text.chars()).for_each(drop);
+        }
     })
 }
