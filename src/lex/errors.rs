@@ -21,6 +21,7 @@ pub enum LexErrorType {
     InvalidEscape(String),
     InvalidLiteral(String),
     InvalidSize(usize),
+    InvalidCharacter(char),
     Other(String),
 }
 
@@ -34,6 +35,7 @@ impl Display for LexErrorType {
             LexErrorType::InvalidLiteral(comment) => write!(f, "Invalid literal: {}", comment),
             LexErrorType::InvalidSize(comment) => write!(f, "Invalid size: {} bits long", comment),
             LexErrorType::Other(comment) => write!(f, "Other lex error: {}", comment),
+            _ => unimplemented!(),
         }
     }
 }

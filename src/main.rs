@@ -8,8 +8,11 @@ use crate::parse::parser::parse;
 use std::env;
 use std::fs::File;
 use std::io::Read;
+#[cfg(fuzzing)]
+use afl::fuzz;
 
 /// A super simple main function which lexes
+#[cfg(not(fuzzing))]
 fn main() -> std::io::Result<()> {
     if env::args().len() != 2 {
         eprintln!("Usage: μcc <filename>");
@@ -27,4 +30,13 @@ fn main() -> std::io::Result<()> {
     println!("Got tree {:?}", tree);
 
     Ok(())
+}
+
+#[cfg(fuzzing)]
+fn main() {
+    fuzz!(|data| {
+        if let Ok(text) = std::str::from_utf8(data) {
+            Lexer::new(text.chars()).for_each(drop);
+        }
+    })
 }

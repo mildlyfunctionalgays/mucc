@@ -226,3 +226,38 @@ fn test_lexer_location() {
 fn test_lexer_comment() {
     test_lexer_str("//hi!!", &[]);
 }
+
+fn test_no_panic(text: &str) {
+    Lexer::new(text.chars()).for_each(drop);
+}
+
+#[test]
+fn test_fuzz() {
+    test_no_panic(r#"
+int`gcd(int a, int b) {
+    while (true) {
+        if (a < b) {
+            int temp = a;
+            a = b;
+            b = temp;
+        } else if (a == b) return a;
+
+        a -= b;
+    }
+}
+    "#);
+    test_no_panic(r#"
+int 'cd(int a, int b) {
+    while (true) {
+        if (a < b) {
+            int temp = a;
+            a = b;
+            b = a;
+        } else if (a == b) return a;
+
+        a -= b;
+    }
+}
+    "#);
+
+}

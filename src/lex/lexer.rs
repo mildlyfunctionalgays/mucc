@@ -194,7 +194,7 @@ where
         if next == '\'' {
             self.ok_token(LexItem::NumericLiteral(NumberType::UnsignedInt(r)))
         } else {
-            unimplemented!()
+            Err(self.error_token(LexErrorType::InvalidLiteral("".to_string())))
         }
     }
 
@@ -373,7 +373,7 @@ where
                 '\'' => self.parse_char_literal(),
                 _ => {
                     if INVALID_IDENTIFIER_CHARS.chars().any(|c| c == ch) {
-                        unimplemented!()
+                        Err(self.error_token(LexErrorType::InvalidCharacter(ch)))
                     } else {
                         let mut ident = String::new();
                         ident.push(ch);
