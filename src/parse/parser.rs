@@ -153,12 +153,10 @@ pub fn parse<T: Iterator<Item = LexResult>>(mut tokens: T) -> Rc<ParseNode> {
 
     loop {
         print!("{} ", states.len());
-        //println!("{:#?}", states);
         states = states
             .into_iter()
             .flat_map(|state| state.move_forward(rules))
             .collect();
-        println!("{}", states.len());
 
         let token = {
             if let Some(token) = tokens.next() {
@@ -188,7 +186,6 @@ pub fn parse<T: Iterator<Item = LexResult>>(mut tokens: T) -> Rc<ParseNode> {
         println!("{:#?}", states);
         unimplemented!()
     } else if let Some(state) = states.into_iter().next() {
-        println!("{:#?}", state);
         if state.parent.is_some() {
             unimplemented!()
         }

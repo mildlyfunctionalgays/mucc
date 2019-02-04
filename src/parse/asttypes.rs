@@ -1,6 +1,9 @@
+#![allow(dead_code)]
+
 use crate::lex::constants::NumberType;
 
-enum Type {
+#[derive(Debug, Clone, PartialEq)]
+pub enum Type {
     // Numbers
     Float,
     Double,
@@ -22,7 +25,8 @@ enum Type {
     Union(Vec<(String, Type)>),
 }
 
-enum TopStatement {
+#[derive(Debug, Clone, PartialEq)]
+pub enum TopStatement {
     Declaration(Type, String, Option<Box<RValue>>),
     ForwardDecleration(Type, String, Vec<Type>),
     FunctionDeclaration(Type, String, Vec<(Type, String)>, Block),
@@ -31,9 +35,11 @@ enum TopStatement {
     // Typedefs will be added to the type table and are thus unneeded here
 }
 
-struct Block(Vec<Statement>);
+#[derive(Debug, Clone, PartialEq)]
+pub struct Block(Vec<Statement>);
 
-enum Statement {
+#[derive(Debug, Clone, PartialEq)]
+pub enum Statement {
     LValue(Box<LValue>),
     Declaration(Type, String, Option<Box<RValue>>),
 
@@ -45,7 +51,8 @@ enum Statement {
     Block(Block),
 }
 
-enum LValue {
+#[derive(Debug, Clone, PartialEq)]
+pub enum LValue {
     PointerDeref(Box<RValue>),
     StructDeref(Box<RValue>, String),
     StructRef(Box<LValue>, String),
@@ -67,7 +74,8 @@ enum LValue {
     Subscript(Box<RValue>, Box<RValue>),
 }
 
-enum RValue {
+#[derive(Debug, Clone, PartialEq)]
+pub enum RValue {
     NumberLiteral(NumberType),
     StringLiteral(Vec<u8>),
 

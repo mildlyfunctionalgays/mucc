@@ -233,7 +233,8 @@ fn test_no_panic(text: &str) {
 
 #[test]
 fn test_fuzz() {
-    test_no_panic(r#"
+    test_no_panic(
+        r#"
 int`gcd(int a, int b) {
     while (true) {
         if (a < b) {
@@ -245,8 +246,10 @@ int`gcd(int a, int b) {
         a -= b;
     }
 }
-    "#);
-    test_no_panic(r#"
+    "#,
+    );
+    test_no_panic(
+        r#"
 int 'cd(int a, int b) {
     while (true) {
         if (a < b) {
@@ -258,6 +261,6 @@ int 'cd(int a, int b) {
         a -= b;
     }
 }
-    "#);
-
+    "#,
+    );
 }

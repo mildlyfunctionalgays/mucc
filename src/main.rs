@@ -1,6 +1,6 @@
 #![recursion_limit = "1000"]
-//#![feature(trace_macros)]
 #![allow(dead_code)]
+mod cpp;
 mod lex;
 mod parse;
 use crate::lex::lexer::Lexer;
@@ -39,9 +39,7 @@ fn main() -> std::io::Result<()> {
 
 #[cfg(fuzzing)]
 fn main() {
-    fuzz!(|data| {
-        if let Ok(text) = std::str::from_utf8(data) {
-            Lexer::new(text.chars()).for_each(drop);
-        }
+    fuzz!(|data| if let Ok(text) = std::str::from_utf8(data) {
+        Lexer::new(text.chars()).for_each(drop);
     })
 }
