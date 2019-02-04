@@ -232,35 +232,11 @@ fn test_no_panic(text: &str) {
 }
 
 #[test]
-fn test_fuzz() {
-    test_no_panic(
-        r#"
-int`gcd(int a, int b) {
-    while (true) {
-        if (a < b) {
-            int temp = a;
-            a = b;
-            b = temp;
-        } else if (a == b) return a;
-
-        a -= b;
-    }
+fn test_invalid_escape() {
+    test_lexer_str_error(r#""\,""#, &[Err(LexErrorType::InvalidEscape(",".to_string()))]);
 }
-    "#,
-    );
-    test_no_panic(
-        r#"
-int 'cd(int a, int b) {
-    while (true) {
-        if (a < b) {
-            int temp = a;
-            a = b;
-            b = a;
-        } else if (a == b) return a;
 
-        a -= b;
-    }
-}
-    "#,
-    );
+#[test]
+fn test_lower_unicode_escape() {
+    test_lexer_str(r#""\u0000""#, &[LexItem::StringLiteral(vec![0])]);
 }

@@ -268,15 +268,32 @@ where
                         match ch {
                             '"' => break,
                             '\\' => s.push(match self.next_char()? {
-                                '\\' => '\\',
+                                'a' => '\x07',
+                                'b' => '\x08',
+                                'f' => '\r',
                                 'n' => '\n',
-                                't' => '\t',
                                 'r' => '\r',
+                                't' => '\t',
+                                'v' => '\x0B',
+                                '\\' => '\\',
+                                '\'' => '\'',
                                 '"' => '"',
+                                '?' => '\x3F',
+                                '0'..='9' => unimplemented!(),
                                 'x' => char::from_u32(
-                                    u32::from_str_radix(&self.next_chars(2)?, 16).ok()?,
+                                    u32::from_str_radix(&self.next_chars(2).unwrap_or_else(||unimplemented!()), 16).unwrap_or_else(|_|unimplemented!()),
                                 )?,
-                                _ => unimplemented!(),
+                                'e' => '\x1B',
+                                'U' => unimplemented!(),
+                                'u' => {
+                                    let s = self.next_chars(4).unwrap_or_else(||unimplemented!());
+                                    let number: u32 = match u32::from_str_radix(&s, 10) {
+                                        Ok(number) => number,
+                                        Err(_) => return Some(Err(self.error_token(LexErrorType::InvalidEscape(format!("u{}", s))))),
+                                    };
+                                    char::from_u32(number).unwrap_or_else(||unimplemented!())
+                                },
+                                invalid => return Some(Err(self.error_token(LexErrorType::InvalidEscape(invalid.to_string())))),
                             }),
                             '\n' => return None,
                             _ => s.push(ch),
