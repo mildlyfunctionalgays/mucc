@@ -4,10 +4,15 @@
 mod lex;
 mod parse;
 use crate::lex::lexer::Lexer;
+#[cfg(not(fuzzing))]
 use crate::parse::parser::parse;
+#[cfg(not(fuzzing))]
 use std::env;
+#[cfg(not(fuzzing))]
 use std::fs::File;
+#[cfg(not(fuzzing))]
 use std::io::Read;
+
 #[cfg(fuzzing)]
 use afl::fuzz;
 
