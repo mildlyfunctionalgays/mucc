@@ -29,6 +29,23 @@ fn test_lexer_str_error(s: &str, tokens: &[Result<LexItem, LexErrorType>]) {
     assert_eq!(vec.as_slice(), tokens);
 }
 
+#[cfg(test)]
+fn test_lexer_str_first_error(s: &str, tokens: Result<&[LexItem], &LexErrorType>) {
+    let lexer = Lexer::new(s.chars());
+
+    let result = lexer
+        .map(|res| {
+            res.map(|success| success.item)
+                .map_err(|err| err.error_type)
+        })
+        .collect::<Result<Vec<_>, _>>();
+    let result = result.as_ref().map(|v| v.as_slice());
+
+    println!("got symbols {:?}", result);
+
+    assert_eq!(result, tokens);
+}
+
 #[test]
 fn test_lexer_error_invalid_size_literal() {
     test_lexer_str_error("0ulll", &[Err(LexErrorType::InvalidSize(256))]);
@@ -233,10 +250,36 @@ fn test_no_panic(text: &str) {
 
 #[test]
 fn test_invalid_escape() {
-    test_lexer_str_error(r#""\,""#, &[Err(LexErrorType::InvalidEscape(",".to_string()))]);
+    test_lexer_str_first_error(
+        r#""\,""#,
+        Err(&LexErrorType::InvalidEscape(",".to_string())),
+    );
 }
 
 #[test]
 fn test_lower_unicode_escape() {
     test_lexer_str(r#""\u0000""#, &[LexItem::StringLiteral(vec![0])]);
+}
+
+#[test]
+fn test_invalid_decimal_escape() {
+    test_lexer_str_first_error(
+        r#""\0n  ""#,
+        Err(&LexErrorType::InvalidEscape("0n  ".to_string())),
+    );
+}
+
+#[test]
+fn test_unclosed_string() {
+    test_lexer_str_first_error(
+        r#"""#,
+        Err(&LexErrorType::UnclosedStringLiteral("".to_string())),
+    );
+    test_lexer_str_first_error(
+        r#""some text
+    ""#,
+        Err(&LexErrorType::UnclosedStringLiteral(
+            "some text".to_string(),
+        )),
+    );
 }

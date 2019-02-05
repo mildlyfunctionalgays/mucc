@@ -159,30 +159,52 @@ where
         }
     }
 
+    fn parse_escape_sequence(&mut self) -> Result<u32, LexError> {
+        Ok(match self.next_char().unwrap_or_else(|| unimplemented!()) {
+            'a' => '\x07',
+            'b' => '\x08',
+            'f' => '\r',
+            'n' => '\n',
+            'r' => '\r',
+            't' => '\t',
+            'v' => '\x0B',
+            '\\' => '\\',
+            '\'' => '\'',
+            '"' => '"',
+            '?' => '?',
+            ch @ '0'..='9' => {
+                let mut number_str = ch.to_string();
+                number_str.push_str(&self.next_chars(3).unwrap_or_else(|| unimplemented!()));
+                return u32::from_str(&number_str)
+                    .map_err(|_| self.error_token(LexErrorType::InvalidEscape(number_str)));
+            }
+            'x' => {
+                return u32::from_str_radix(
+                    &self.next_chars(2).unwrap_or_else(|| unimplemented!()),
+                    16,
+                )
+                .map_err(|_| unimplemented!());
+            }
+            'e' => '\x1B',
+            'U' => unimplemented!(),
+            'u' => {
+                let s = self.next_chars(4).unwrap_or_else(|| unimplemented!());
+                return u32::from_str(&s)
+                    .map_err(|_| self.error_token(LexErrorType::InvalidEscape(format!("u{}", s))));
+            }
+            invalid => {
+                return Err(self.error_token(LexErrorType::InvalidEscape(invalid.to_string())));
+            }
+        } as u32)
+    }
+
     fn parse_char_literal(&mut self) -> LexResult {
         let r = match self
             .next_char()
             .ok_or_else(|| self.error_token(LexErrorType::Unfinished("'".to_string())))?
         {
             '\'' => return Err(self.error_token(LexErrorType::InvalidLiteral("''".to_string()))),
-            '\\' => match self
-                .next_char()
-                .ok_or_else(|| self.error_token(LexErrorType::Unfinished("'\\".to_string())))?
-            {
-                'n' => '\n' as u32,
-                't' => '\t' as u32,
-                'r' => '\r' as u32,
-                '\\' => '\\' as u32,
-                '\'' => '\'' as u32,
-                'x' => u32::from_str_radix(
-                    &self.next_chars(2).ok_or_else(|| {
-                        self.error_token(LexErrorType::Unfinished("'\\x".to_string()))
-                    })?,
-                    16,
-                )
-                .map_err(|_| self.error_token(LexErrorType::InvalidEscape(unimplemented!())))?,
-                _ => unimplemented!(),
-            },
+            '\\' => self.parse_escape_sequence()?,
             ch => ch as u32,
         };
         let next = self.next_char().ok_or_else(|| {
@@ -262,51 +284,52 @@ where
             let mut ch = self.next_after_whitespace()?;
             Some(match ch {
                 '"' => {
-                    let mut s = String::new();
+                    let mut s: Vec<u8> = Vec::new();
                     loop {
-                        let ch = self.next_char()?;
+                        let ch = match self.next_char() {
+                            Some(ch) => ch,
+                            None => {
+                                return Some(Err(self.error_token(
+                                    LexErrorType::UnclosedStringLiteral(
+                                        String::from_utf8_lossy(&s).to_string(),
+                                    ),
+                                )));
+                            }
+                        };
+                        let mut buffer = [0u8; 4];
                         match ch {
                             '"' => break,
-                            '\\' => s.push(match self.next_char()? {
-                                'a' => '\x07',
-                                'b' => '\x08',
-                                'f' => '\r',
-                                'n' => '\n',
-                                'r' => '\r',
-                                't' => '\t',
-                                'v' => '\x0B',
-                                '\\' => '\\',
-                                '\'' => '\'',
-                                '"' => '"',
-                                '?' => '\x3F',
-                                '0'..='9' => unimplemented!(),
-                                'x' => char::from_u32(
-                                    u32::from_str_radix(&self.next_chars(2).unwrap_or_else(||unimplemented!()), 16).unwrap_or_else(|_|unimplemented!()),
-                                )?,
-                                'e' => '\x1B',
-                                'U' => unimplemented!(),
-                                'u' => {
-                                    let s = self.next_chars(4).unwrap_or_else(||unimplemented!());
-                                    let number: u32 = match u32::from_str_radix(&s, 10) {
-                                        Ok(number) => number,
-                                        Err(_) => return Some(Err(self.error_token(LexErrorType::InvalidEscape(format!("u{}", s))))),
-                                    };
-                                    char::from_u32(number).unwrap_or_else(||unimplemented!())
-                                },
-                                invalid => return Some(Err(self.error_token(LexErrorType::InvalidEscape(invalid.to_string())))),
-                            }),
-                            '\n' => return None,
-                            _ => s.push(ch),
+                            '\\' => {
+                                let character = match self.parse_escape_sequence() {
+                                    Ok(ok) => ok,
+                                    Err(e) => return Some(Err(e)),
+                                };
+                                if let Some(character) = char::from_u32(character) {
+                                    s.extend_from_slice(
+                                        character.encode_utf8(&mut buffer).as_bytes(),
+                                    );
+                                } else {
+                                    s.push(character as u8);
+                                }
+                            }
+                            '\n' => {
+                                return Some(Err(self.error_token(
+                                    LexErrorType::UnclosedStringLiteral(
+                                        String::from_utf8_lossy(&s).to_string(),
+                                    ),
+                                )));
+                            }
+                            _ => s.extend_from_slice(ch.encode_utf8(&mut buffer).as_bytes()),
                         }
                     }
-                    self.ok_token(LexItem::StringLiteral(s.as_bytes().to_vec()))
+                    self.ok_token(LexItem::StringLiteral(s))
                 }
                 '0' => {
-                    ch = self.next_char()?;
+                    ch = self.next_char().unwrap_or_else(|| unimplemented!());
                     match ch {
                         'b' => {
                             let mut num = String::new();
-                            num.push(self.next_char()?);
+                            num.push(self.next_char().unwrap_or_else(|| unimplemented!()));
                             while let Some(ch) = self.next_char() {
                                 let chl = ch.to_ascii_lowercase();
                                 if '0' == ch || ch == '1' {
@@ -317,11 +340,15 @@ where
                                 }
                             }
 
-                            self.parse_type_specifier(u128::from_str_radix(&num, 2).ok()?)
+                            self.parse_type_specifier(
+                                u128::from_str_radix(&num, 2)
+                                    .ok()
+                                    .unwrap_or_else(|| unimplemented!()),
+                            )
                         }
                         'o' => {
                             let mut num = String::new();
-                            num.push(self.next_char()?);
+                            num.push(self.next_char().unwrap_or_else(|| unimplemented!()));
                             while let Some(ch) = self.next_char() {
                                 let chl = ch.to_ascii_lowercase();
                                 if '0' <= ch && ch <= '7' {
@@ -331,11 +358,15 @@ where
                                     break;
                                 }
                             }
-                            self.parse_type_specifier(u128::from_str_radix(&num, 8).ok()?)
+                            self.parse_type_specifier(
+                                u128::from_str_radix(&num, 8)
+                                    .ok()
+                                    .unwrap_or_else(|| unimplemented!()),
+                            )
                         }
                         'x' => {
                             let mut num = String::new();
-                            num.push(self.next_char()?);
+                            num.push(self.next_char().unwrap_or_else(|| unimplemented!()));
                             while let Some(ch) = self.next_char() {
                                 let chl = ch.to_ascii_lowercase();
                                 if '0' <= ch && ch <= '9' || 'a' <= chl && chl <= 'f' {
@@ -346,7 +377,11 @@ where
                                 }
                             }
 
-                            self.parse_type_specifier(u128::from_str_radix(&num, 16).ok()?)
+                            self.parse_type_specifier(
+                                u128::from_str_radix(&num, 16)
+                                    .ok()
+                                    .unwrap_or_else(|| unimplemented!()),
+                            )
                         }
                         '0'...'9' => {
                             let mut num = String::new();
@@ -361,7 +396,11 @@ where
                                 }
                             }
 
-                            self.parse_type_specifier(u128::from_str_radix(&num, 8).ok()?)
+                            self.parse_type_specifier(
+                                u128::from_str_radix(&num, 8)
+                                    .ok()
+                                    .unwrap_or_else(|| unimplemented!()),
+                            )
                         }
                         'U' | 'L' | 'u' | 'l' => {
                             self.nextnt(ch);
@@ -385,7 +424,11 @@ where
                         }
                     }
 
-                    self.parse_type_specifier(u128::from_str(&num).ok()?)
+                    self.parse_type_specifier(
+                        u128::from_str(&num)
+                            .ok()
+                            .unwrap_or_else(|| unimplemented!()),
+                    )
                 }
                 '\'' => self.parse_char_literal(),
                 _ => {

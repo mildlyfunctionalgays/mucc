@@ -18,6 +18,7 @@ pub struct LexError {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LexErrorType {
     Unfinished(String),
+    UnclosedStringLiteral(String),
     InvalidEscape(String),
     InvalidLiteral(String),
     InvalidSize(usize),
