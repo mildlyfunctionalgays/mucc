@@ -59,9 +59,7 @@ fn test_n_body() {
         .unwrap();
     let input = gcc.stdin.as_mut().unwrap();
 
-    input
-        .write_all(include_str!("n-body.c").as_bytes())
-        .unwrap();
+    input.write_all(include_bytes!("n-body.c")).unwrap();
 
     let output = gcc.wait_with_output().unwrap().stdout;
 
