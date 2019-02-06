@@ -1,5 +1,5 @@
 use crate::lex::errors::LexResult;
-use crate::lex::lexer::Lexer;
+use crate::lex::Lexer;
 use crate::parse::parser::parse;
 use crate::parse::parsetreetypes::NonTerminalType;
 use crate::parse::parsetreetypes::ParseNode;

@@ -1,5 +1,5 @@
 use super::constants::{LexItem, NumberType};
-use super::lexer::Lexer;
+use super::Lexer;
 use crate::lex::errors::LexErrorType;
 
 #[cfg(test)]
@@ -49,6 +49,11 @@ fn test_lexer_str_first_error(s: &str, tokens: Result<&[LexItem], &LexErrorType>
 #[test]
 fn test_lexer_error_invalid_size_literal() {
     test_lexer_str_error("0ulll", &[Err(LexErrorType::InvalidSize(256))]);
+}
+
+#[test]
+fn test_lexer_zero() {
+    test_lexer_str("0", &[LexItem::NumericLiteral(NumberType::SignedInt(0))])
 }
 
 #[test]
@@ -286,7 +291,7 @@ fn test_unclosed_string() {
 
 #[test]
 fn test_incomplete_binary_literal() {
-    test_lexer_str_first_error("0b", Err(&LexErrorType::InvalidLiteral("0b".to_string())));
+    test_lexer_str_first_error("0b", Err(&LexErrorType::EmptyNumericLiteral));
 }
 
 #[test]

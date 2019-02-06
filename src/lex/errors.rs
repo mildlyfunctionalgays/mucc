@@ -3,13 +3,13 @@ use std::fmt::Display;
 use std::fmt::Error;
 use std::fmt::Formatter;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Location {
     pub line: usize,
     pub column: usize,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct LexError {
     pub error_type: LexErrorType,
     pub location: Location,
@@ -23,6 +23,8 @@ pub enum LexErrorType {
     InvalidLiteral(String),
     InvalidSize(usize),
     InvalidCharacter(char),
+    EmptyNumericLiteral,
+    LargeNumericLiteral,
     Other(String),
 }
 
@@ -35,6 +37,10 @@ impl Display for LexErrorType {
             }
             LexErrorType::InvalidLiteral(comment) => write!(f, "Invalid literal: {}", comment),
             LexErrorType::InvalidSize(comment) => write!(f, "Invalid size: {} bits long", comment),
+            LexErrorType::EmptyNumericLiteral => write!(f, "Empty numeric literal"),
+            LexErrorType::LargeNumericLiteral => {
+                write!(f, "Numeric literal too large for any data type")
+            }
             LexErrorType::Other(comment) => write!(f, "Other lex error: {}", comment),
             _ => unimplemented!(),
         }

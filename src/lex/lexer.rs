@@ -4,21 +4,12 @@ use crate::lex::errors::LexErrorType;
 use crate::lex::errors::LexResult;
 use crate::lex::errors::LexSuccess;
 use crate::lex::errors::Location;
+use crate::lex::Lexer;
 use std::char;
 use std::iter::Iterator;
 use std::str::FromStr;
 
 const INVALID_IDENTIFIER_CHARS: &str = " !\"#%&'()*+,-./;;<=>?@[\\]^`{|}~";
-
-pub struct Lexer<It: Iterator<Item = char>> {
-    source: It,
-    lookahead: Vec<char>,
-    line: usize,
-    column: usize,
-    start_line: usize,
-    start_column: usize,
-    last_column: usize,
-}
 
 fn is_identifier_char(ch: char) -> bool {
     !INVALID_IDENTIFIER_CHARS.chars().any(|c| c == ch)
@@ -48,7 +39,7 @@ where
         Some(())
     }
 
-    fn next_char(&mut self) -> Option<char> {
+    pub(super) fn next_char(&mut self) -> Option<char> {
         let ch = self.lookahead.pop().or_else(|| self.source.next())?;
         match ch {
             '\n' => {
@@ -95,7 +86,7 @@ where
             self.next_char()
         }
     }
-    fn nextnt(&mut self, ch: char) {
+    pub(super) fn nextnt(&mut self, ch: char) {
         match ch {
             '\n' => {
                 self.line -= 1;
@@ -106,7 +97,7 @@ where
         self.lookahead.push(ch);
     }
 
-    fn nextnt_string(&mut self, s: &str) {
+    pub(super) fn nextnt_string(&mut self, s: &str) {
         s.chars().rev().for_each(|c| self.nextnt(c));
     }
 
@@ -151,7 +142,7 @@ where
                 .max_by_key(|(key, _)| key.len());
             return if let Some((key, value)) = largest_match {
                 self.nextnt_string(&token[key.trim_end_matches('\x00').len()..]);
-                Some(self.ok_token(value.clone()))
+                Some(Ok(self.ok_token(value.clone())))
             } else {
                 self.nextnt_string(&token);
                 None
@@ -214,21 +205,21 @@ where
             )))
         })?;
         if next == '\'' {
-            self.ok_token(LexItem::NumericLiteral(NumberType::UnsignedInt(r)))
+            Ok(self.ok_token(LexItem::NumericLiteral(NumberType::UnsignedInt(r))))
         } else {
             Err(self.error_token(LexErrorType::InvalidLiteral("".to_string())))
         }
     }
 
-    fn ok_token(&self, token: LexItem) -> LexResult {
-        Ok(LexSuccess {
+    pub(super) fn ok_token(&self, token: LexItem) -> LexSuccess {
+        LexSuccess {
             item: token,
             line: self.start_line,
             column: self.start_column,
-        })
+        }
     }
 
-    fn error_token(&self, token: LexErrorType) -> LexError {
+    pub(super) fn error_token(&self, token: LexErrorType) -> LexError {
         LexError {
             error_type: token,
             location: Location {
@@ -238,7 +229,7 @@ where
         }
     }
 
-    fn parse_type_specifier(&mut self, num: u128) -> LexResult {
+    pub(super) fn parse_type_specifier(&mut self, num: u128) -> LexResult {
         let mut signed = true;
         let mut size = 32usize;
         while let Some(ch) = self.next_char() {
@@ -268,7 +259,7 @@ where
             _ => return Err(self.error_token(LexErrorType::InvalidSize(size))),
         };
 
-        self.ok_token(LexItem::NumericLiteral(nt))
+        Ok(self.ok_token(LexItem::NumericLiteral(nt)))
     }
 }
 
@@ -318,96 +309,9 @@ where
                             _ => s.extend_from_slice(ch.encode_utf8(&mut buffer).as_bytes()),
                         }
                     }
-                    self.ok_token(LexItem::StringLiteral(s))
+                    Ok(self.ok_token(LexItem::StringLiteral(s)))
                 }
-                '0' => match self.next_char() {
-                    Some('b') => {
-                        let mut num = String::new();
-                        while let Some(ch) = self.next_char() {
-                            let chl = ch.to_ascii_lowercase();
-                            if '0' == ch || ch == '1' {
-                                num.push(chl);
-                            } else {
-                                self.nextnt(ch);
-                                break;
-                            }
-                        }
-
-                        if num.is_empty() {
-                            Err(self.error_token(LexErrorType::InvalidLiteral("0b".to_string())))
-                        } else {
-                            match u128::from_str_radix(&num, 2) {
-                                Ok(val) => self.parse_type_specifier(val),
-                                _ => unimplemented!(),
-                            }
-                        }
-                    }
-                    Some('o') => {
-                        let mut num = String::new();
-                        num.push(self.next_char().unwrap_or_else(|| unimplemented!()));
-                        while let Some(ch) = self.next_char() {
-                            let chl = ch.to_ascii_lowercase();
-                            if '0' <= ch && ch <= '7' {
-                                num.push(chl);
-                            } else {
-                                self.nextnt(ch);
-                                break;
-                            }
-                        }
-                        self.parse_type_specifier(
-                            u128::from_str_radix(&num, 8)
-                                .ok()
-                                .unwrap_or_else(|| unimplemented!()),
-                        )
-                    }
-                    Some('x') => {
-                        let mut num = String::new();
-                        num.push(self.next_char().unwrap_or_else(|| unimplemented!()));
-                        while let Some(ch) = self.next_char() {
-                            let chl = ch.to_ascii_lowercase();
-                            if '0' <= ch && ch <= '9' || 'a' <= chl && chl <= 'f' {
-                                num.push(chl);
-                            } else {
-                                self.nextnt(ch);
-                                break;
-                            }
-                        }
-
-                        self.parse_type_specifier(
-                            u128::from_str_radix(&num, 16)
-                                .ok()
-                                .unwrap_or_else(|| unimplemented!()),
-                        )
-                    }
-                    Some(ch @ '0'...'9') => {
-                        let mut num = String::new();
-                        num.push(ch);
-                        while let Some(ch) = self.next_char() {
-                            let chl = ch.to_ascii_lowercase();
-                            if '0' <= ch && ch <= '7' {
-                                num.push(chl);
-                            } else {
-                                self.nextnt(ch);
-                                break;
-                            }
-                        }
-
-                        self.parse_type_specifier(
-                            u128::from_str_radix(&num, 8)
-                                .ok()
-                                .unwrap_or_else(|| unimplemented!()),
-                        )
-                    }
-                    Some(ch @ 'U') | Some(ch @ 'L') | Some(ch @ 'u') | Some(ch @ 'l') => {
-                        self.nextnt(ch);
-                        self.parse_type_specifier(0)
-                    }
-                    Some(ch) => {
-                        self.nextnt(ch);
-                        self.ok_token(LexItem::NumericLiteral(NumberType::SignedInt(0)))
-                    }
-                    None => self.ok_token(LexItem::NumericLiteral(NumberType::SignedInt(0))),
-                },
+                '0' => self.parse_numeric_zero_literal(),
                 '1'...'9' => {
                     let mut num = String::new();
                     num.push(ch);
@@ -442,7 +346,7 @@ where
                             }
                         }
 
-                        self.ok_token(LexItem::Identifier(ident))
+                        Ok(self.ok_token(LexItem::Identifier(ident)))
                     }
                 }
             })())

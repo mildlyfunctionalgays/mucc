@@ -3,7 +3,7 @@
 mod cpp;
 mod lex;
 mod parse;
-use crate::lex::lexer::Lexer;
+use crate::lex::Lexer;
 #[cfg(not(fuzzing))]
 use crate::parse::parser::parse;
 #[cfg(not(fuzzing))]
