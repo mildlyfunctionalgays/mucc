@@ -210,14 +210,17 @@ where
     fn next(&mut self) -> Option<LexResult> {
         self.set_start_pos()?;
 
-        if let Some(token) = self.next_regular_token() {
-            Some(token)
+        Some(if let Some(token) = self.next_regular_token() {
+            token
         } else {
             let ch = self.next_after_whitespace()?;
-            Some((|| match ch {
+            match ch {
                 '"' => self.parse_string_literal(),
                 '0' => self.parse_numeric_zero_literal(),
-                '1'...'9' => self.parse_decimal_literal(ch),
+                '1'...'9' => {
+                    self.nextnt(ch);
+                    self.read_numeric_literal(10)
+                }
                 '\'' => self.parse_char_literal(),
                 _ => {
                     if INVALID_IDENTIFIER_CHARS.chars().any(|c| c == ch) {
@@ -237,7 +240,7 @@ where
                         Ok(self.ok_token(LexItem::Identifier(ident)))
                     }
                 }
-            })())
-        }
+            }
+        })
     }
 }

@@ -72,14 +72,11 @@ impl<It: Iterator<Item = char>> Lexer<It> {
     pub(super) fn parse_string_literal(&mut self) -> LexResult {
         let mut s: Vec<u8> = Vec::new();
         loop {
-            let ch = match self.next_char() {
-                Some(ch) => ch,
-                None => {
-                    return Err(self.error_token(LexErrorType::UnclosedStringLiteral(
-                        String::from_utf8_lossy(&s).to_string(),
-                    )));
-                }
-            };
+            let ch = self.next_char().ok_or_else(|| {
+                self.error_token(LexErrorType::UnclosedStringLiteral(
+                    String::from_utf8_lossy(&s).to_string(),
+                ))
+            })?;
             let mut buffer = [0u8; 4];
             match ch {
                 '"' => break,
