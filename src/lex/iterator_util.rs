@@ -1,8 +1,8 @@
-use crate::lex::constants::LexItem;
 use crate::lex::errors::LexError;
 use crate::lex::errors::LexErrorType;
 use crate::lex::errors::LexSuccess;
 use crate::lex::errors::Location;
+use crate::lex::types::LexItem;
 use crate::lex::Lexer;
 
 impl<It: Iterator<Item = char>> Lexer<It> {

@@ -1,8 +1,8 @@
-use crate::lex::constants::LexItem;
-use crate::lex::constants::NumberType;
 use crate::lex::errors::LexError;
 use crate::lex::errors::LexErrorType;
 use crate::lex::errors::LexResult;
+use crate::lex::types::LexItem;
+use crate::lex::types::NumberType;
 use crate::lex::Lexer;
 use std::char;
 use std::str::FromStr;

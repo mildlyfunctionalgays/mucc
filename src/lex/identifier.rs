@@ -1,7 +1,7 @@
-use crate::lex::constants::LexItem;
 use crate::lex::constants::INVALID_IDENTIFIER_CHARS;
 use crate::lex::errors::LexErrorType;
 use crate::lex::errors::LexResult;
+use crate::lex::types::LexItem;
 use crate::lex::Lexer;
 
 impl<It: Iterator<Item = char>> Lexer<It> {

@@ -1,4 +1,6 @@
-use super::constants::*;
+use super::constants::LITERAL_TOKENS;
+use super::types::LexItem;
+use crate::lex::constants::is_identifier_char;
 use crate::lex::errors::LexResult;
 use crate::lex::Lexer;
 use std::char;

@@ -1,4 +1,4 @@
-use crate::lex::constants::{LexItem, NumberType};
+use crate::lex::types::{LexItem, NumberType};
 use crate::parse::parsetreetypes::{
     NonTerminalType::{self, *},
     RuleType,

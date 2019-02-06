@@ -1,7 +1,8 @@
-pub mod constants;
+pub(crate) mod constants;
 pub mod errors;
 #[cfg(test)]
 mod tests;
+pub mod types;
 
 pub struct Lexer<It: Iterator<Item = char>> {
     source: It,
@@ -15,7 +16,7 @@ pub struct Lexer<It: Iterator<Item = char>> {
 
 // Implementations of lexer
 mod identifier;
+mod iterator_util;
 pub mod lexer;
 mod numeric;
 mod string;
-mod util;

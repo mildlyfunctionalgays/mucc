@@ -1,6 +1,6 @@
-use crate::lex::constants::LexItem;
 use crate::lex::constants::LITERAL_TOKENS;
 use crate::lex::errors::LexSuccess;
+use crate::lex::types::LexItem;
 use std::mem::discriminant;
 use std::mem::Discriminant;
 use std::rc::Rc;

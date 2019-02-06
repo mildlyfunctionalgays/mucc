@@ -1,4 +1,4 @@
-use crate::lex::constants::LexItem;
+use crate::lex::types::LexItem;
 use std::fmt::Display;
 use std::fmt::Error;
 use std::fmt::Formatter;

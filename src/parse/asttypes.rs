@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::lex::constants::NumberType;
+use crate::lex::types::NumberType;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {

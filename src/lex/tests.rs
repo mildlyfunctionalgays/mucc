@@ -1,4 +1,4 @@
-use super::constants::{LexItem, NumberType};
+use super::types::{LexItem, NumberType};
 use super::Lexer;
 use crate::lex::errors::LexErrorType;
 
