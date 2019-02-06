@@ -283,3 +283,13 @@ fn test_unclosed_string() {
         )),
     );
 }
+
+#[test]
+fn test_incomplete_binary_literal() {
+    test_lexer_str_first_error("0b", Err(&LexErrorType::InvalidLiteral("0b".to_string())));
+}
+
+#[test]
+fn test_zero_at_end() {
+    test_lexer_str("0", &[LexItem::NumericLiteral(NumberType::SignedInt(0))]);
+}

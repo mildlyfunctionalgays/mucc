@@ -280,30 +280,31 @@ where
 
     fn next(&mut self) -> Option<LexResult> {
         self.set_start_pos()?;
-        self.next_regular_token().or_else(|| {
-            let mut ch = self.next_after_whitespace()?;
-            Some(match ch {
+
+        if let Some(token) = self.next_regular_token() {
+            return Some(token);
+        }
+        let ch = self.next_after_whitespace()?;
+        Some((|| {
+            match ch {
                 '"' => {
                     let mut s: Vec<u8> = Vec::new();
                     loop {
                         let ch = match self.next_char() {
                             Some(ch) => ch,
                             None => {
-                                return Some(Err(self.error_token(
+                                return Err(self.error_token(
                                     LexErrorType::UnclosedStringLiteral(
                                         String::from_utf8_lossy(&s).to_string(),
                                     ),
-                                )));
+                                ));
                             }
                         };
                         let mut buffer = [0u8; 4];
                         match ch {
                             '"' => break,
                             '\\' => {
-                                let character = match self.parse_escape_sequence() {
-                                    Ok(ok) => ok,
-                                    Err(e) => return Some(Err(e)),
-                                };
+                                let character = self.parse_escape_sequence()?;
                                 if let Some(character) = char::from_u32(character) {
                                     s.extend_from_slice(
                                         character.encode_utf8(&mut buffer).as_bytes(),
@@ -313,11 +314,11 @@ where
                                 }
                             }
                             '\n' => {
-                                return Some(Err(self.error_token(
+                                return Err(self.error_token(
                                     LexErrorType::UnclosedStringLiteral(
                                         String::from_utf8_lossy(&s).to_string(),
                                     ),
-                                )));
+                                ));
                             }
                             _ => s.extend_from_slice(ch.encode_utf8(&mut buffer).as_bytes()),
                         }
@@ -325,11 +326,9 @@ where
                     self.ok_token(LexItem::StringLiteral(s))
                 }
                 '0' => {
-                    ch = self.next_char().unwrap_or_else(|| unimplemented!());
-                    match ch {
-                        'b' => {
+                    match self.next_char() {
+                        Some('b') => {
                             let mut num = String::new();
-                            num.push(self.next_char().unwrap_or_else(|| unimplemented!()));
                             while let Some(ch) = self.next_char() {
                                 let chl = ch.to_ascii_lowercase();
                                 if '0' == ch || ch == '1' {
@@ -340,13 +339,16 @@ where
                                 }
                             }
 
-                            self.parse_type_specifier(
-                                u128::from_str_radix(&num, 2)
-                                    .ok()
-                                    .unwrap_or_else(|| unimplemented!()),
-                            )
+                            if num.len() == 0 {
+                                Err(self.error_token(LexErrorType::InvalidLiteral("0b".to_string())))
+                            } else {
+                                match u128::from_str_radix(&num, 2) {
+                                    Ok(val) => self.parse_type_specifier(val),
+                                    Err(_) => unimplemented!(),
+                                }
+                            }
                         }
-                        'o' => {
+                        Some('o') => {
                             let mut num = String::new();
                             num.push(self.next_char().unwrap_or_else(|| unimplemented!()));
                             while let Some(ch) = self.next_char() {
@@ -364,7 +366,7 @@ where
                                     .unwrap_or_else(|| unimplemented!()),
                             )
                         }
-                        'x' => {
+                        Some('x') => {
                             let mut num = String::new();
                             num.push(self.next_char().unwrap_or_else(|| unimplemented!()));
                             while let Some(ch) = self.next_char() {
@@ -383,7 +385,7 @@ where
                                     .unwrap_or_else(|| unimplemented!()),
                             )
                         }
-                        '0'...'9' => {
+                        Some(ch @ '0'...'9') => {
                             let mut num = String::new();
                             num.push(ch);
                             while let Some(ch) = self.next_char() {
@@ -402,14 +404,15 @@ where
                                     .unwrap_or_else(|| unimplemented!()),
                             )
                         }
-                        'U' | 'L' | 'u' | 'l' => {
+                        Some(ch @ 'U') | Some(ch @ 'L') | Some(ch @ 'u') | Some(ch @ 'l') => {
                             self.nextnt(ch);
                             self.parse_type_specifier(0)
                         }
-                        _ => {
+                        Some(ch) => {
                             self.nextnt(ch);
                             self.ok_token(LexItem::NumericLiteral(NumberType::SignedInt(0)))
                         }
+                        None => self.ok_token(LexItem::NumericLiteral(NumberType::SignedInt(0)))
                     }
                 }
                 '1'...'9' => {
@@ -449,7 +452,7 @@ where
                         self.ok_token(LexItem::Identifier(ident))
                     }
                 }
-            })
-        })
+            }
+        })())
     }
 }
