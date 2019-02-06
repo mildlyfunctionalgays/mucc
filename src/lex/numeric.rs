@@ -46,21 +46,6 @@ impl<It: Iterator<Item = char>> Lexer<It> {
         }
     }
 
-    pub(super) fn parse_decimal_literal(&mut self, start: char) -> LexResult {
-        let mut num = String::new();
-        num.push(start);
-        while let Some(ch) = self.next_char() {
-            if '0' <= ch && ch <= '9' {
-                num.push(ch);
-            } else {
-                self.nextnt(ch);
-                break;
-            }
-        }
-
-        self.parse_num_radix(num, 10)
-    }
-
     fn parse_num_radix(&mut self, num: String, radix: u8) -> LexResult {
         if !num.is_empty() {
             if let Ok(n) = u128::from_str_radix(&num, u32::from(radix)) {

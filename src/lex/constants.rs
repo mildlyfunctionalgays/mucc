@@ -1,6 +1,8 @@
 #[derive(Clone, Debug, PartialEq)]
 pub enum NumberType {
+    #[allow(dead_code)]
     Float(f32),
+    #[allow(dead_code)]
     Double(f64),
     SignedChar(i8),
     UnsignedChar(u8),

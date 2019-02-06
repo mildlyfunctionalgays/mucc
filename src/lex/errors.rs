@@ -25,7 +25,6 @@ pub enum LexErrorType {
     InvalidCharacter(char),
     EmptyNumericLiteral,
     LargeNumericLiteral,
-    Other(String),
 }
 
 impl Display for LexErrorType {
@@ -41,7 +40,6 @@ impl Display for LexErrorType {
             LexErrorType::LargeNumericLiteral => {
                 write!(f, "Numeric literal too large for any data type")
             }
-            LexErrorType::Other(comment) => write!(f, "Other lex error: {}", comment),
             _ => unimplemented!(),
         }
     }

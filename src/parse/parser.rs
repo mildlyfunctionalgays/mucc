@@ -121,12 +121,6 @@ impl<'a> RuleState<'a> {
     }
 }
 
-struct ParserState<'a, T: Iterator<Item = LexResult>> {
-    it: T,
-    lookahead: Vec<LexResult>,
-    rule: RuleState<'a>,
-}
-
 fn search_rule<'a>(
     rules: &[(NonTerminalType, &'a [RuleType])],
     request: &NonTerminalType,
@@ -136,14 +130,6 @@ fn search_rule<'a>(
         .filter(|rule| rule.0 == *request)
         .map(|rule| rule.1)
         .collect()
-}
-
-fn next_tok<T: Iterator<Item = LexResult>>(state: &mut ParserState<T>) -> Option<LexResult> {
-    state.lookahead.pop().or_else(|| state.it.next())
-}
-
-fn next_success<T: Iterator<Item = LexResult>>(state: &mut ParserState<T>) -> Option<LexSuccess> {
-    next_tok(state)?.ok()
 }
 
 pub fn parse<T: Iterator<Item = LexResult>>(mut tokens: T) -> Rc<ParseNode> {

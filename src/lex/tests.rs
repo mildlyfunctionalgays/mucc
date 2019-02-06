@@ -249,6 +249,8 @@ fn test_lexer_comment() {
     test_lexer_str("//hi!!", &[]);
 }
 
+#[cfg(test)]
+#[allow(dead_code)]
 fn test_no_panic(text: &str) {
     Lexer::new(text.chars()).for_each(drop);
 }

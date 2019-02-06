@@ -132,12 +132,3 @@ pub struct ParseNode {
     pub node_type: ParseNodeType,
     pub children: Vec<Rc<ParseNode>>,
 }
-
-impl ParseNode {
-    pub fn from_lex(lex: LexSuccess) -> Self {
-        ParseNode {
-            node_type: ParseNodeType::Terminal(lex),
-            children: Vec::new(),
-        }
-    }
-}

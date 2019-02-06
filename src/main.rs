@@ -1,5 +1,4 @@
 #![recursion_limit = "1000"]
-#![allow(dead_code)]
 mod cpp;
 mod lex;
 mod parse;
