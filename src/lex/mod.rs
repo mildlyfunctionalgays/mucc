@@ -13,6 +13,9 @@ pub struct Lexer<It: Iterator<Item = char>> {
     last_column: usize,
 }
 
+// Implementations of lexer
+mod identifier;
 pub mod lexer;
 mod numeric;
 mod string;
+mod util;

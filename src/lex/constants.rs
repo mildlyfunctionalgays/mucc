@@ -211,3 +211,9 @@ pub enum LexItem {
     Complex,
     Imaginary,
 }
+
+pub(super) const INVALID_IDENTIFIER_CHARS: &str = " !\"#%&'()*+,-./;;<=>?@[\\]^`{|}~";
+
+pub(super) fn is_identifier_char(ch: char) -> bool {
+    !INVALID_IDENTIFIER_CHARS.chars().any(|c| c == ch)
+}

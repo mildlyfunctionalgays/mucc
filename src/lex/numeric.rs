@@ -57,4 +57,37 @@ impl<It: Iterator<Item = char>> Lexer<It> {
             Err(self.error_token(LexErrorType::EmptyNumericLiteral))
         }
     }
+
+    fn parse_type_specifier(&mut self, num: u128) -> LexResult {
+        let mut signed = true;
+        let mut size = 32usize;
+        while let Some(ch) = self.next_char() {
+            match ch.to_ascii_lowercase() {
+                'u' => signed = false,
+                'l' => size <<= 1,
+                'a'...'z' => {
+                    return Err(self.error_token(LexErrorType::InvalidLiteral(format!("'{}'", ch))));
+                }
+                _ => {
+                    self.nextnt(ch);
+                    break;
+                }
+            }
+        }
+        let nt = match (size, signed) {
+            (8, false) => NumberType::UnsignedChar(num as u8),
+            (8, true) => NumberType::SignedChar(num as i8),
+            (16, false) => NumberType::UnsignedShort(num as u16),
+            (16, true) => NumberType::SignedShort(num as i16),
+            (32, false) => NumberType::UnsignedInt(num as u32),
+            (32, true) => NumberType::SignedInt(num as i32),
+            (64, false) => NumberType::UnsignedLong(num as u64),
+            (64, true) => NumberType::SignedLong(num as i64),
+            (128, false) => NumberType::UnsignedLongLong(num as u128),
+            (128, true) => NumberType::SignedLongLong(num as i128),
+            _ => return Err(self.error_token(LexErrorType::InvalidSize(size))),
+        };
+
+        Ok(self.ok_token(LexItem::NumericLiteral(nt)))
+    }
 }
