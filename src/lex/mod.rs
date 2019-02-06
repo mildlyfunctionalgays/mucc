@@ -15,3 +15,4 @@ pub struct Lexer<It: Iterator<Item = char>> {
 
 pub mod lexer;
 mod numeric;
+mod string;
