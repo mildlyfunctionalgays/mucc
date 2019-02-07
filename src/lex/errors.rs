@@ -25,6 +25,7 @@ pub enum LexErrorType {
     InvalidCharacter(char),
     EmptyNumericLiteral,
     LargeNumericLiteral,
+    UnfinishedEscape,
 }
 
 impl Display for LexErrorType {

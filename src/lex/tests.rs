@@ -300,3 +300,33 @@ fn test_incomplete_binary_literal() {
 fn test_zero_at_end() {
     test_lexer_str("0", &[LexItem::NumericLiteral(NumberType::SignedInt(0))]);
 }
+
+#[test]
+fn test_truncated_string_escape() {
+    test_lexer_str_first_error(r#""\"#, Err(&LexErrorType::UnfinishedEscape));
+}
+
+#[test]
+fn test_truncated_decimal() {
+    test_lexer_str_first_error(r#""\1"#, Err(&LexErrorType::UnfinishedEscape));
+}
+
+#[test]
+fn test_truncated_upper_unicode_escape() {
+    test_lexer_str_first_error(r#""\U"#, Err(&LexErrorType::UnfinishedEscape));
+}
+
+#[test]
+fn test_truncated_hex_byte_escape() {
+    test_lexer_str_first_error(r#""\x"#, Err(&LexErrorType::UnfinishedEscape));
+}
+
+#[test]
+fn test_truncated_lower_unicode_escape() {
+    test_lexer_str_first_error(r#""\u"#, Err(&LexErrorType::UnfinishedEscape));
+}
+
+#[test]
+fn test_invalid_hex_byte_escape() {
+    test_lexer_str_first_error(r"'\x\0", Err(&LexErrorType::InvalidEscape(r"\x\0".to_string())));
+}

@@ -9,7 +9,8 @@ use std::str::FromStr;
 
 impl<It: Iterator<Item = char>> Lexer<It> {
     pub(super) fn parse_escape_sequence(&mut self) -> Result<u32, LexError> {
-        Ok(match self.next_char().unwrap_or_else(|| unimplemented!()) {
+
+        Ok(match self.next_char().ok_or_else(||self.error_token(LexErrorType::UnfinishedEscape))? {
             'a' => '\x07',
             'b' => '\x08',
             'f' => '\r',
@@ -23,21 +24,26 @@ impl<It: Iterator<Item = char>> Lexer<It> {
             '?' => '?',
             ch @ '0'..='9' => {
                 let mut number_str = ch.to_string();
-                number_str.push_str(&self.next_chars(3).unwrap_or_else(|| unimplemented!()));
+                number_str.push_str(&self.next_chars(3).ok_or_else(||self.error_token(LexErrorType::UnfinishedEscape))?);
                 return u32::from_str(&number_str)
                     .map_err(|_| self.error_token(LexErrorType::InvalidEscape(number_str)));
             }
             'x' => {
+                let chars = self.next_chars(2).ok_or_else(||self.error_token(LexErrorType::UnfinishedEscape))?;
                 return u32::from_str_radix(
-                    &self.next_chars(2).unwrap_or_else(|| unimplemented!()),
+                    &chars,
                     16,
                 )
-                .map_err(|_| unimplemented!());
+                .map_err(|_| self.error_token(LexErrorType::InvalidEscape(r"\x".to_string() + &chars)));
             }
             'e' => '\x1B',
-            'U' => unimplemented!(),
+            'U' => {
+                let s = self.next_chars(8).ok_or_else(||self.error_token(LexErrorType::UnfinishedEscape))?;
+                return u32::from_str(&s)
+                    .map_err(|_| self.error_token(LexErrorType::InvalidEscape(format!("U{}", s))));
+            },
             'u' => {
-                let s = self.next_chars(4).unwrap_or_else(|| unimplemented!());
+                let s = self.next_chars(4).ok_or_else(||self.error_token(LexErrorType::UnfinishedEscape))?;
                 return u32::from_str(&s)
                     .map_err(|_| self.error_token(LexErrorType::InvalidEscape(format!("u{}", s))));
             }
