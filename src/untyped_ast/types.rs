@@ -20,23 +20,25 @@ pub enum Type {
 
     Pointer(Option<Box<Type>>),
     Array(Box<Type>, usize),
-    Struct(Vec<(String, Type)>),
+    Struct(Option<String>, Vec<(String, Type)>),
     FunctionPtr(Vec<Type>, Option<Box<Type>>),
-    Union(Vec<(String, Type)>),
+    Union(Option<String>, Vec<(String, Type)>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TopStatement {
     Declaration(Type, String, Option<Box<RValue>>),
-    ForwardDecleration(Type, String, Vec<Type>),
+    ForwardDeclaration(Type, String, Vec<Type>),
     FunctionDeclaration(Type, String, Vec<(Type, String)>, Block),
-    StructDeclaration(String, Vec<(Type, String)>),
-    UnionDeclaration(String, Vec<(Type, String)>),
-    // Typedefs will be added to the type table and are thus unneeded here
+    StructOrUnionDeclaration(Type),
+    TypedefDeclaration(String, Type),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Block(Vec<Statement>);
+pub struct Block(pub Vec<Statement>);
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Root(pub Vec<TopStatement>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {

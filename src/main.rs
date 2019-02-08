@@ -2,6 +2,8 @@
 mod cpp;
 mod lex;
 mod parse;
+mod untyped_ast;
+
 use crate::lex::Lexer;
 #[cfg(not(fuzzing))]
 use crate::parse::parser::parse;

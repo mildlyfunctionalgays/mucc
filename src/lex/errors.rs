@@ -32,16 +32,21 @@ impl Display for LexErrorType {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
             LexErrorType::Unfinished(comment) => write!(f, "Unfinished statement: {}", comment),
+            LexErrorType::UnclosedStringLiteral(comment) => {
+                write!(f, "String literal \"{}\" never ends", comment)
+            }
             LexErrorType::InvalidEscape(comment) => {
                 write!(f, "Invalid escape sequence: {}", comment)
             }
             LexErrorType::InvalidLiteral(comment) => write!(f, "Invalid literal: {}", comment),
             LexErrorType::InvalidSize(comment) => write!(f, "Invalid size: {} bits long", comment),
+            LexErrorType::InvalidCharacter(chr) => {
+                write!(f, "'\\{}' is not a valid escape sequence", chr)
+            }
             LexErrorType::EmptyNumericLiteral => write!(f, "Empty numeric literal"),
             LexErrorType::LargeNumericLiteral => {
                 write!(f, "Numeric literal too large for any data type")
             }
-            _ => unimplemented!(),
         }
     }
 }
