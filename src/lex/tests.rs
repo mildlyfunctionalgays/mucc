@@ -328,5 +328,8 @@ fn test_truncated_lower_unicode_escape() {
 
 #[test]
 fn test_invalid_hex_byte_escape() {
-    test_lexer_str_first_error(r"'\x\0", Err(&LexErrorType::InvalidEscape(r"\x\0".to_string())));
+    test_lexer_str_first_error(
+        r"'\x\0",
+        Err(&LexErrorType::InvalidEscape(r"\x\0".to_string())),
+    );
 }

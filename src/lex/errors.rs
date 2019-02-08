@@ -47,6 +47,7 @@ impl Display for LexErrorType {
             LexErrorType::LargeNumericLiteral => {
                 write!(f, "Numeric literal too large for any data type")
             }
+            LexErrorType::UnfinishedEscape => write!(f, "Escape sequence unfinished"),
         }
     }
 }
