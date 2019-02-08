@@ -28,6 +28,8 @@ pub enum NonTerminalType {
     BasicType,
     TypeSpecifier,
     MaybeType,
+    TypeWithIdentifier,
+    TypeWithMaybeIdentifier,
     BasicDeclaration,
     FunctionDeclaration,
     ForwardDeclaration,

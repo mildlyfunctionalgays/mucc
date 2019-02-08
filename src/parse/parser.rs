@@ -1,8 +1,8 @@
 #![allow(unused_variables)]
-use super::parsetreetypes::{ParseNode, ParseNodeType};
+use super::types::{ParseNode, ParseNodeType};
 use crate::lex::errors::{LexResult, LexSuccess};
-use crate::parse::parsetreetypes::NonTerminalType;
-use crate::parse::parsetreetypes::RuleType;
+use crate::parse::types::NonTerminalType;
+use crate::parse::types::RuleType;
 use std::mem::discriminant;
 use std::rc::Rc;
 

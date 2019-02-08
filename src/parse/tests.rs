@@ -1,9 +1,9 @@
 use crate::lex::errors::LexResult;
 use crate::lex::Lexer;
 use crate::parse::parser::parse;
-use crate::parse::parsetreetypes::NonTerminalType;
-use crate::parse::parsetreetypes::ParseNode;
-use crate::parse::parsetreetypes::ParseNodeType;
+use crate::parse::types::NonTerminalType;
+use crate::parse::types::ParseNode;
+use crate::parse::types::ParseNodeType;
 use std::io::Write;
 use std::process::Command;
 use std::process::Stdio;

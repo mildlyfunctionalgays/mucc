@@ -1,6 +1,6 @@
-use crate::parse::parsetreetypes::NonTerminalType;
-use crate::parse::parsetreetypes::ParseNode;
-use crate::parse::parsetreetypes::ParseNodeType;
+use crate::parse::types::NonTerminalType;
+use crate::parse::types::ParseNode;
+use crate::parse::types::ParseNodeType;
 use crate::untyped_ast::top_statement::read_top_statements;
 use crate::untyped_ast::types::Root;
 use std::rc::Rc;

@@ -1,5 +1,5 @@
 use crate::lex::types::{LexItem, NumberType};
-use crate::parse::parsetreetypes::{
+use crate::parse::types::{
     NonTerminalType::{self, *},
     RuleType,
 };
@@ -95,8 +95,13 @@ pub fn get_rules() -> Vec<(NonTerminalType, Vec<RuleType>)> {
         MaybeType -> ε,
         MaybeType -> Type,
 
-        BasicDeclaration -> Type Identifier "(" Args ")",
-        BasicDeclaration -> Type Identifier "(" ")",
+        TypeWithIdentifier -> Type Identifier,
+        // TODO: Add function pointer support
+
+        TypeWithMaybeIdentifier -> Type MaybeIdentifier,
+
+        BasicDeclaration -> TypeWithIdentifier "(" Args ")",
+        BasicDeclaration -> TypeWithIdentifier "(" ")",
         FunctionDeclaration -> BasicDeclaration Block,
         ForwardDeclaration -> BasicDeclaration ";",
 
@@ -112,7 +117,7 @@ pub fn get_rules() -> Vec<(NonTerminalType, Vec<RuleType>)> {
 
         StructMembers -> ε,
         StructMembers -> StructMember StructMembers,
-        StructMember -> Type Identifier MaybeBitfield ";",
+        StructMember -> TypeWithIdentifier MaybeBitfield ";",
 
         MaybeBitfield -> ":" NumericLiteral,
         MaybeBitfield -> ε,
@@ -136,8 +141,8 @@ pub fn get_rules() -> Vec<(NonTerminalType, Vec<RuleType>)> {
         ExpressionOrDeclaration -> Declaration,
         ExpressionOrDeclaration -> ε,
 
-        Declaration -> Type MaybeIdentifier,
-        Declaration -> Type Identifier "=" Expression,
+        Declaration -> TypeWithMaybeIdentifier,
+        Declaration -> TypeWithIdentifier "=" Expression,
 
         ForLoop -> "for" "(" ExpressionOrDeclaration ";" Expression ";" Expression ")" Statement,
 
