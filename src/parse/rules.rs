@@ -105,8 +105,8 @@ pub fn get_rules() -> Vec<(NonTerminalType, Vec<RuleType>)> {
         FunctionDeclaration -> BasicDeclaration Block,
         ForwardDeclaration -> BasicDeclaration ";",
 
-        Args -> Type MaybeIdentifier,
-        Args -> Type MaybeIdentifier "," Args,
+        Args -> TypeWithMaybeIdentifier,
+        Args -> TypeWithMaybeIdentifier "," Args,
 
         StructOrUnionDeclaration -> StructOrUnion MaybeIdentifier "{" Members "}",
         StructOrUnion -> "struct",

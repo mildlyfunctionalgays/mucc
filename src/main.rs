@@ -14,6 +14,7 @@ use std::fs::File;
 #[cfg(not(fuzzing))]
 use std::io::Read;
 
+use crate::untyped_ast::build_untyped_ast;
 #[cfg(fuzzing)]
 use afl::fuzz;
 
@@ -33,7 +34,9 @@ fn main() -> std::io::Result<()> {
     let tokens = Lexer::new(chars);
 
     let tree = parse(tokens);
-    println!("Got tree {:?}", tree);
+
+    let u_ast = build_untyped_ast(tree);
+    println!("Got tree {:?}", u_ast);
 
     Ok(())
 }
