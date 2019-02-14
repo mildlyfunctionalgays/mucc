@@ -5,7 +5,6 @@ mod parse;
 mod untyped_ast;
 
 use crate::lex::Lexer;
-#[cfg(not(fuzzing))]
 use crate::parse::parser::parse;
 #[cfg(not(fuzzing))]
 use std::env;
@@ -16,7 +15,8 @@ use std::io::Read;
 
 use crate::untyped_ast::build_untyped_ast;
 #[cfg(fuzzing)]
-use afl::fuzz;
+//use afl::fuzz;
+use honggfuzz::fuzz;
 
 /// A super simple main function which lexes
 #[cfg(not(fuzzing))]
@@ -33,7 +33,7 @@ fn main() -> std::io::Result<()> {
     let chars = code.chars();
     let tokens = Lexer::new(chars);
 
-    let tree = parse(tokens);
+    let tree = parse(tokens).unwrap();
 
     let u_ast = build_untyped_ast(tree);
     println!("Got tree {:?}", u_ast);
@@ -43,10 +43,12 @@ fn main() -> std::io::Result<()> {
 
 #[cfg(fuzzing)]
 fn main() {
-    fuzz!(|data| {
-        // Comment to prevent rustfmt from BREAKING this code
-        if let Ok(text) = std::str::from_utf8(data) {
-            Lexer::new(text.chars()).for_each(drop);
-        }
-    })
+    loop {
+        fuzz!(|data| {
+            // Comment to prevent rustfmt from BREAKING this code
+            if let Ok(text) = std::str::from_utf8(data) {
+                let _ = Lexer::new(text.chars()).for_each(drop);
+            }
+        });
+    }
 }

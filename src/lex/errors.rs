@@ -3,10 +3,9 @@ use std::fmt::Display;
 use std::fmt::Error;
 use std::fmt::Formatter;
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Location {
-    pub line: usize,
-    pub column: usize,
+    pub character: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -57,6 +56,5 @@ pub type LexResult = Result<LexSuccess, LexError>;
 #[derive(Clone, Debug, PartialEq)]
 pub struct LexSuccess {
     pub item: LexItem,
-    pub line: usize,
-    pub column: usize,
+    pub location: Location,
 }

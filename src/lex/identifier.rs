@@ -12,8 +12,8 @@ impl<It: Iterator<Item = char>> Lexer<It> {
             let mut ident = String::new();
             ident.push(ch);
             while let Some(ch) = self.next_char() {
-                if !INVALID_IDENTIFIER_CHARS.chars().any(|c| c == ch) {
-                    ident.push(ch);
+                if !INVALID_IDENTIFIER_CHARS.chars().any(|c| c == ch.ch) {
+                    ident.push(ch.ch);
                 } else {
                     self.nextnt(ch);
                     break;

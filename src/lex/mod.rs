@@ -1,3 +1,7 @@
+use crate::lex::errors::Location;
+use crate::lex::iterator_util::SourceChar;
+use std::iter::Enumerate;
+
 pub(crate) mod constants;
 pub mod errors;
 #[cfg(test)]
@@ -5,13 +9,10 @@ mod tests;
 pub mod types;
 
 pub struct Lexer<It: Iterator<Item = char>> {
-    source: It,
-    lookahead: Vec<char>,
-    line: usize,
-    column: usize,
-    start_line: usize,
-    start_column: usize,
-    last_column: usize,
+    source: Enumerate<It>,
+    lookahead: Vec<SourceChar>,
+    character: Location,
+    start_char: Location,
 }
 
 // Implementations of lexer

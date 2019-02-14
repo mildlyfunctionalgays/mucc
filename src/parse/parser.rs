@@ -1,9 +1,11 @@
 #![allow(unused_variables)]
 use super::types::{ParseNode, ParseNodeType};
 use crate::lex::errors::{LexResult, LexSuccess};
+use crate::lex::types::LexItem;
 use crate::parse::types::NonTerminalType;
 use crate::parse::types::RuleType;
 use std::mem::discriminant;
+use std::mem::Discriminant;
 use std::rc::Rc;
 
 #[derive(Clone, Debug)]
@@ -49,10 +51,10 @@ impl<'a> RuleState<'a> {
         self,
         token: &LexSuccess,
         rules: &[(NonTerminalType, &'a [RuleType])],
-    ) -> Option<RuleState<'a>> {
+    ) -> Result<RuleState<'a>, Option<Discriminant<LexItem>>> {
         let index = self.self_node.children.len();
         if self.rule.len() == index {
-            return None;
+            return Err(None);
         }
         let next_rule = &self.rule[index];
         if let RuleType::Terminal(item) = next_rule {
@@ -63,9 +65,9 @@ impl<'a> RuleState<'a> {
                     node_type: ParseNodeType::Terminal(token.clone()),
                     children: Vec::new(),
                 }));
-                Some(state)
+                Ok(state)
             } else {
-                None
+                Err(Some(*item))
             }
         } else {
             unreachable!();
@@ -132,7 +134,9 @@ fn search_rule<'a>(
         .collect()
 }
 
-pub fn parse<T: Iterator<Item = LexResult>>(mut tokens: T) -> Rc<ParseNode> {
+pub fn parse<T: Iterator<Item = LexResult>>(
+    mut tokens: T,
+) -> Result<Rc<ParseNode>, Vec<Option<Discriminant<LexItem>>>> {
     let rules = &*super::rules::RULES;
 
     let mut states: Vec<RuleState> = vec![RuleState::new_start(rules)];
@@ -152,10 +156,20 @@ pub fn parse<T: Iterator<Item = LexResult>>(mut tokens: T) -> Rc<ParseNode> {
             }
         };
 
-        states = states
+        let state_results: (Vec<_>, Vec<_>) = states
             .into_iter()
-            .filter_map(|state| state.match_token(&token, rules))
-            .collect();
+            .map(|state| state.match_token(&token, rules))
+            .partition(Result::is_ok);
+        states = state_results.0.into_iter().map(Result::unwrap).collect();
+
+        if states.is_empty() {
+            let expected: Vec<Option<Discriminant<LexItem>>> = state_results
+                .1
+                .into_iter()
+                .map(Result::unwrap_err)
+                .collect();
+            return Err(expected);
+        }
     }
 
     states = states
@@ -175,7 +189,7 @@ pub fn parse<T: Iterator<Item = LexResult>>(mut tokens: T) -> Rc<ParseNode> {
         if state.parent.is_some() {
             unimplemented!()
         }
-        state.self_node
+        Ok(state.self_node)
     } else {
         unimplemented!()
     }

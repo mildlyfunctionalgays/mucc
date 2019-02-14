@@ -8,7 +8,7 @@ impl<It: Iterator<Item = char>> Lexer<It> {
     pub(super) fn read_numeric_literal(&mut self, radix: u8) -> LexResult {
         let mut num = String::new();
         while let Some(ch) = self.next_char() {
-            let chl = ch.to_ascii_lowercase();
+            let chl = ch.ch.to_ascii_lowercase();
             match chl {
                 '0'...'9' if (chl as u8) - b'0' < radix => num.push(chl),
                 'a'..='z' if (chl as u8) - b'a' + 10 < radix => num.push(chl),
@@ -24,7 +24,7 @@ impl<It: Iterator<Item = char>> Lexer<It> {
 
     pub(super) fn parse_numeric_zero_literal(&mut self) -> LexResult {
         if let Some(ch) = self.next_char() {
-            match ch {
+            match ch.ch {
                 'b' => self.read_numeric_literal(2),
                 'o' => self.read_numeric_literal(8),
                 'x' => self.read_numeric_literal(16),
@@ -62,11 +62,13 @@ impl<It: Iterator<Item = char>> Lexer<It> {
         let mut signed = true;
         let mut size = 32usize;
         while let Some(ch) = self.next_char() {
-            match ch.to_ascii_lowercase() {
+            match ch.ch.to_ascii_lowercase() {
                 'u' => signed = false,
                 'l' => size <<= 1,
                 'a'...'z' => {
-                    return Err(self.error_token(LexErrorType::InvalidLiteral(format!("'{}'", ch))));
+                    return Err(
+                        self.error_token(LexErrorType::InvalidLiteral(format!("'{}'", ch.ch)))
+                    );
                 }
                 _ => {
                     self.nextnt(ch);

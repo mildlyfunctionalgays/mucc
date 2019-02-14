@@ -8,4 +8,5 @@ edition = "2018"
 lazy_static = "1.2.0"
 
 [target.'cfg(fuzzing)'.dependencies]
-afl = "*"
+#afl = "*"
+honggfuzz = "0.5"

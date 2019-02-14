@@ -210,14 +210,34 @@ fn test_lexer_string_literal() {
     )
 }
 
+fn get_line_col<I: Iterator<Item = char> + Clone>(input: I, character: usize) -> (usize, usize) {
+    input
+        .scan((1, 1), |state, ch| {
+            let pos = *state;
+            if ch == '\n' {
+                state.0 += 1;
+                state.1 = 1;
+            } else {
+                state.1 += 1;
+            }
+            Some(pos)
+        })
+        .nth(character)
+        .unwrap()
+}
+
 #[test]
 fn test_lexer_location() {
     let s = "int main(int argc, char *argv[]) {\n\treturn 0;\n}";
     let lexer = Lexer::new(s.chars());
-    let vec = lexer
+    let vec: Vec<(usize, usize)> = lexer
         .map(|res| {
-            res.map(|success| (success.line, success.column))
-                .unwrap_or_else(|err| (err.location.line, err.location.column))
+            get_line_col(
+                s.chars(),
+                res.map(|success| success.location)
+                    .unwrap_or_else(|err| err.location)
+                    .character,
+            )
         })
         .collect::<Vec<_>>();
     assert_eq!(
@@ -309,6 +329,7 @@ fn test_truncated_string_escape() {
 #[test]
 fn test_truncated_decimal() {
     test_lexer_str_first_error(r#""\1"#, Err(&LexErrorType::UnfinishedEscape));
+    test_lexer_str_first_error(r#""\10"#, Err(&LexErrorType::UnfinishedEscape));
 }
 
 #[test]
@@ -319,6 +340,7 @@ fn test_truncated_upper_unicode_escape() {
 #[test]
 fn test_truncated_hex_byte_escape() {
     test_lexer_str_first_error(r#""\x"#, Err(&LexErrorType::UnfinishedEscape));
+    test_lexer_str_first_error(r#""\x0"#, Err(&LexErrorType::UnfinishedEscape));
 }
 
 #[test]
@@ -332,4 +354,9 @@ fn test_invalid_hex_byte_escape() {
         r"'\x\0",
         Err(&LexErrorType::InvalidEscape(r"\x\0".to_string())),
     );
+}
+
+#[test]
+fn test_multiline_nextnt() {
+    test_no_panic("\"\\Ut\n\n");
 }

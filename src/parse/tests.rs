@@ -15,38 +15,38 @@ fn test_parse_empty() {
     let parsed = parse(Lexer::new(text.chars()));
     assert_eq!(
         parsed,
-        Rc::new(ParseNode {
+        Ok(Rc::new(ParseNode {
             node_type: ParseNodeType::NonTerminal(NonTerminalType::Start),
             children: vec![Rc::new(ParseNode {
                 node_type: ParseNodeType::NonTerminal(NonTerminalType::TopStatements),
                 children: vec![]
             })]
-        })
+        }))
     )
 }
 
 #[test]
 fn test_parse_semicolon() {
     let text = ";";
-    let _parse = parse(Lexer::new(text.chars()));
+    let _parse = parse(Lexer::new(text.chars())).unwrap();
 }
 
 #[test]
 fn test_parse_minimal_main() {
     let text = "int main() {\n    return 0;\n}\n";
-    let _parse = parse(Lexer::new(text.chars()));
+    let _parse = parse(Lexer::new(text.chars())).unwrap();
 }
 
 #[test]
 fn test_parse_typedef() {
     let text = "typedef unsigned int blah;";
-    let _parse = parse(Lexer::new(text.chars()));
+    let _parse = parse(Lexer::new(text.chars())).unwrap();
 }
 
 #[test]
 fn test_parse_gcd() {
     let text = include_str!("gcd.c");
-    let _parse = parse(Lexer::new(text.chars()));
+    let _parse = parse(Lexer::new(text.chars())).unwrap();
 }
 
 #[test]
@@ -72,5 +72,11 @@ fn test_n_body() {
         Lexer::new(text.chars()).collect::<Vec<LexResult>>()
     );
 
-    let _parse = parse(Lexer::new(text.chars()));
+    let _parse = parse(Lexer::new(text.chars())).unwrap();
+}
+
+#[test]
+fn test_parse_0_invalid() {
+    let text = "0";
+    let _parse = parse(Lexer::new(text.chars())).unwrap_err();
 }

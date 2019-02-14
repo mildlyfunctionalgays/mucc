@@ -2,6 +2,8 @@ use super::constants::LITERAL_TOKENS;
 use super::types::LexItem;
 use crate::lex::constants::is_identifier_char;
 use crate::lex::errors::LexResult;
+use crate::lex::errors::Location;
+use crate::lex::iterator_util::SourceString;
 use crate::lex::Lexer;
 use std::char;
 use std::iter::Iterator;
@@ -12,28 +14,26 @@ where
 {
     pub fn new(src: It) -> Lexer<It> {
         Lexer {
-            source: src,
+            source: src.enumerate(),
             lookahead: Vec::new(),
-            line: 1,
-            column: 0,
-            start_line: 1,
-            start_column: 0,
-            last_column: 0,
+            character: Location { character: 0 },
+            start_char: Location { character: 0 },
         }
     }
 
     fn next_regular_token(&mut self) -> Option<LexResult> {
-        let mut token: String = self.next_after_whitespace()?.to_string();
+        let mut token = SourceString::new();
+        token.push(self.next_after_whitespace()?);
 
         loop {
             let partial_matches: Vec<&(&str, LexItem)> = LITERAL_TOKENS
                 .iter()
-                .filter(|(key, _)| key.trim_end_matches('\x00').starts_with(&token))
+                .filter(|(key, _)| key.trim_end_matches('\x00').starts_with(&token.to_string()))
                 .collect();
 
             let returning_match = partial_matches.len() < 2
                 && if let Some((match_, _)) = partial_matches.first() {
-                    token.starts_with(match_)
+                    token.to_string().starts_with(match_)
                 } else {
                     true
                 };
@@ -48,9 +48,10 @@ where
             let largest_match = LITERAL_TOKENS
                 .iter()
                 .filter(|(key, _)| {
-                    token.starts_with(key.trim_end_matches('\x00'))
+                    token.to_string().starts_with(key.trim_end_matches('\x00'))
                         && if key.ends_with('\x00') {
                             token
+                                .to_string()
                                 .trim_start_matches(key.trim_end_matches('\x00'))
                                 .chars()
                                 .next()
@@ -62,10 +63,11 @@ where
                 })
                 .max_by_key(|(key, _)| key.len());
             return if let Some((key, value)) = largest_match {
-                self.nextnt_string(&token[key.trim_end_matches('\x00').len()..]);
+                self.nextnt_string(token);
+                self.next_chars(key.trim_end_matches('\x00').len()).unwrap();
                 Some(Ok(self.ok_token(value.clone())))
             } else {
-                self.nextnt_string(&token);
+                self.nextnt_string(token);
                 None
             };
         }
@@ -85,7 +87,7 @@ where
             token
         } else {
             let ch = self.next_after_whitespace()?;
-            match ch {
+            match ch.ch {
                 '"' => self.parse_string_literal(),
                 '0' => self.parse_numeric_zero_literal(),
                 '1'...'9' => {
@@ -93,7 +95,7 @@ where
                     self.read_numeric_literal(10)
                 }
                 '\'' => self.parse_char_literal(),
-                _ => self.parse_identifier(ch),
+                _ => self.parse_identifier(ch.ch),
             }
         })
     }
