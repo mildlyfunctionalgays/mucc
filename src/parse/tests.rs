@@ -50,6 +50,12 @@ fn test_parse_gcd() {
 }
 
 #[test]
+fn test_parse_pointers() {
+    let text = "int**********;";
+    let _parse = parse(Lexer::new(text.chars())).unwrap();
+}
+
+#[test]
 #[ignore]
 fn test_n_body() {
     let mut gcc = Command::new("gcc")
