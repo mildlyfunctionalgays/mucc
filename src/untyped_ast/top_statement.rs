@@ -2,8 +2,8 @@ use crate::lex::types::LexItem;
 use crate::parse::types::NonTerminalType;
 use crate::parse::types::ParseNode;
 use crate::parse::types::ParseNodeType;
-use crate::untyped_ast::types::TopStatement;
 use crate::untyped_ast::types::Type;
+use crate::untyped_ast::types::{BaseType, TopStatement};
 use std::rc::Rc;
 
 pub(super) fn read_top_statements(node: Rc<ParseNode>) -> Vec<TopStatement> {
@@ -75,7 +75,9 @@ fn read_basic_declaration(node: Rc<ParseNode>) -> (Type, String, Vec<(Type, Opti
         (typ, name, args)
     } else {
         require_terminal!(node, 3, LexItem::RightParen);
-        unimplemented!()
+        let (typ, name) = read_type_with_identifier(node.children[0].clone());
+        let args = read_args(node.children[2].clone());
+        (typ, name, args)
     }
 }
 
@@ -91,11 +93,28 @@ fn read_type_with_identifier(node: Rc<ParseNode>) -> (Type, String) {
     (typ, ident)
 }
 
+fn read_type_with_maybe_identifier(node: Rc<ParseNode>) -> (Type, Option<String>) {
+    require_non_terminal!(node, NonTerminalType::TypeWithMaybeIdentifier);
+    require_len!(node, |len| len == 1);
+
+    match node.children[0].node_type {
+        ParseNodeType::NonTerminal(NonTerminalType::TypeWithIdentifier) => {
+            let (typ, name) = read_type_with_identifier(node.children[0].clone());
+            (typ, Some(name))
+        }
+        ParseNodeType::NonTerminal(NonTerminalType::Type) => {
+            let typ = read_type(node.children[0].clone());
+            (typ, None)
+        }
+        _ => unreachable!(),
+    }
+}
+
 fn read_type(node: Rc<ParseNode>) -> Type {
     require_non_terminal!(node, NonTerminalType::Type);
 
     // TODO: Make this work, currently it's just for testing
-    Type::SignedInt
+    Type::new(BaseType::SignedInt)
 }
 
 fn read_identifier(node: Rc<ParseNode>) -> String {
@@ -105,5 +124,18 @@ fn read_identifier(node: Rc<ParseNode>) -> String {
             _ => unreachable!(),
         },
         _ => unreachable!(),
+    }
+}
+
+fn read_args(node: Rc<ParseNode>) -> Vec<(Type, Option<String>)> {
+    require_non_terminal!(node, NonTerminalType::Args);
+    require_len!(node, |len| len == 1 || len == 3);
+
+    if node.children.len() == 1 {
+        vec![read_type_with_maybe_identifier(node.children[0].clone())]
+    } else {
+        let mut args = vec![read_type_with_maybe_identifier(node.children[0].clone())];
+        args.extend(read_args(node.children[2].clone()));
+        args
     }
 }

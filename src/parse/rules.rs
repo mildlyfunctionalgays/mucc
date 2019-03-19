@@ -96,7 +96,8 @@ pub fn get_rules() -> Vec<(NonTerminalType, Vec<RuleType>)> {
         TypeWithIdentifier -> Type Identifier,
         // TODO: Add function pointer support
 
-        TypeWithMaybeIdentifier -> Type MaybeIdentifier,
+        TypeWithMaybeIdentifier -> TypeWithIdentifier,
+        TypeWithMaybeIdentifier -> Type,
 
         BasicDeclaration -> TypeWithIdentifier "(" Args ")",
         BasicDeclaration -> TypeWithIdentifier "(" ")",

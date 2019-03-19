@@ -3,7 +3,24 @@
 use crate::lex::types::NumberType;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Type {
+pub struct Type {
+    pub base: BaseType,
+    pub volatile: bool,
+    pub register: bool,
+}
+
+impl Type {
+    pub fn new(base: BaseType) -> Self {
+        Type {
+            base,
+            volatile: false,
+            register: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum BaseType {
     // Numbers
     Float,
     Double,
@@ -58,21 +75,7 @@ pub enum LValue {
     PointerDeref(Box<RValue>),
     StructDeref(Box<RValue>, String),
     StructRef(Box<LValue>, String),
-
-    Assign(Box<LValue>, Box<RValue>),
-    AddAssign(Box<LValue>, Box<RValue>),
-    SubAssign(Box<LValue>, Box<RValue>),
-    MulAssign(Box<LValue>, Box<RValue>),
-    DivAssign(Box<LValue>, Box<RValue>),
-    ModAssign(Box<LValue>, Box<RValue>),
-    BitwiseAndAssign(Box<LValue>, Box<RValue>),
-    BitwiseOrAssign(Box<LValue>, Box<RValue>),
-    BitwiseXorAssign(Box<LValue>, Box<RValue>),
-    BitwiseLeftShiftAssign(Box<LValue>, Box<RValue>),
-    BitwiseRightShiftAssign(Box<LValue>, Box<RValue>),
-
     Variable(String),
-
     Subscript(Box<RValue>, Box<RValue>),
 }
 
@@ -124,6 +127,18 @@ pub enum RValue {
     Ternary(Box<RValue>, Box<RValue>, Box<RValue>),
 
     FunctionName(String),
+
+    Assign(Box<LValue>, Box<RValue>),
+    AddAssign(Box<LValue>, Box<RValue>),
+    SubAssign(Box<LValue>, Box<RValue>),
+    MulAssign(Box<LValue>, Box<RValue>),
+    DivAssign(Box<LValue>, Box<RValue>),
+    ModAssign(Box<LValue>, Box<RValue>),
+    BitwiseAndAssign(Box<LValue>, Box<RValue>),
+    BitwiseOrAssign(Box<LValue>, Box<RValue>),
+    BitwiseXorAssign(Box<LValue>, Box<RValue>),
+    BitwiseLeftShiftAssign(Box<LValue>, Box<RValue>),
+    BitwiseRightShiftAssign(Box<LValue>, Box<RValue>),
 
     LValue(LValue),
 }

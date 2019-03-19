@@ -67,18 +67,20 @@ fn find_non_terminal<'a>(
 
 fn left_recursions_map(
 ) -> HashMap<NonTerminalType, Vec<Vec<(NonTerminalType, &'static [RuleType])>>> {
-    let mut map: HashMap<NonTerminalType, Vec<Vec<(NonTerminalType, &'static [RuleType])>>> = HashMap::new();
+    let mut map: HashMap<NonTerminalType, Vec<Vec<(NonTerminalType, &'static [RuleType])>>> =
+        HashMap::new();
     let rules = *super::rules::RULES;
 
     for rule in rules {
         let key = rule.0;
         match map.entry(key) {
             Entry::Occupied(mut o) => {
-                o.get_mut().extend_from_slice(&find_non_terminal(key, vec![*rule], rules));
-            },
+                o.get_mut()
+                    .extend_from_slice(&find_non_terminal(key, vec![*rule], rules));
+            }
             Entry::Vacant(v) => {
                 v.insert(find_non_terminal(key, vec![*rule], rules));
-            },
+            }
         };
     }
     println!("map = {:#?}", map);
@@ -176,22 +178,30 @@ impl<'a> RuleState<'a> {
                     RuleType::NonTerminal(ref non_terminal) => non_terminal,
                 };
                 let recursions = LEFT_RECURSIONS.get(non_terminal).unwrap();
-                recursions.iter().map(|recursion| {
-                    recursion.iter().fold((*parent).clone(), |node, &(non_terminal, rule): &(NonTerminalType, &[RuleType])| {
-                        RuleState {
-                            rule,
-                            parent: Some(Rc::new(node)),
-                            self_node: Rc::new(ParseNode {
-                                node_type: ParseNodeType::NonTerminal(non_terminal),
-                                children: vec![]
-                            }),
-                        }
+                recursions
+                    .iter()
+                    .map(|recursion| {
+                        recursion.iter().fold(
+                            (*parent).clone(),
+                            |node, &(non_terminal, rule): &(NonTerminalType, &[RuleType])| {
+                                RuleState {
+                                    rule,
+                                    parent: Some(Rc::new(node)),
+                                    self_node: Rc::new(ParseNode {
+                                        node_type: ParseNodeType::NonTerminal(non_terminal),
+                                        children: vec![],
+                                    }),
+                                }
+                            },
+                        )
                     })
-                }).chain(iter::once((*parent).clone())).flat_map(|mut node| {
-                    let new_node = Rc::make_mut(&mut node.self_node);
-                    new_node.children.push(self_node.clone());
-                    node.move_forward(rules).into_iter()
-                }).collect()
+                    .chain(iter::once((*parent).clone()))
+                    .flat_map(|mut node| {
+                        let new_node = Rc::make_mut(&mut node.self_node);
+                        new_node.children.push(self_node.clone());
+                        node.move_forward(rules).into_iter()
+                    })
+                    .collect()
             } else {
                 vec![RuleState {
                     rule,
@@ -232,7 +242,6 @@ pub fn parse<T: Iterator<Item = LexResult>>(
     let mut states: Vec<RuleState> = vec![RuleState::new_start(rules)];
 
     loop {
-        print!("{} ", states.len());
         states = states
             .into_iter()
             .flat_map(|state| state.move_forward(rules))
@@ -258,7 +267,6 @@ pub fn parse<T: Iterator<Item = LexResult>>(
                 .into_iter()
                 .map(Result::unwrap_err)
                 .collect();
-            dbg!(&expected);
             return Err(expected);
         }
     }
@@ -275,7 +283,7 @@ pub fn parse<T: Iterator<Item = LexResult>>(
 
     if states.len() > 1 {
         dbg!(states);
-        unimplemented!()
+        unimplemented!("Ambiguous parsing")
     } else if let Some(state) = states.into_iter().next() {
         if state.parent.is_some() {
             unimplemented!()
