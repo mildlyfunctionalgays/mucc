@@ -10,7 +10,7 @@ impl<It: Iterator<Item = char>> Lexer<It> {
         while let Some(ch) = self.next_char() {
             let chl = ch.ch.to_ascii_lowercase();
             match chl {
-                '0'...'9' if (chl as u8) - b'0' < radix => num.push(chl),
+                '0'..='9' if (chl as u8) - b'0' < radix => num.push(chl),
                 'a'..='z' if (chl as u8) - b'a' + 10 < radix => num.push(chl),
                 _ => {
                     self.nextnt(ch);
@@ -28,7 +28,7 @@ impl<It: Iterator<Item = char>> Lexer<It> {
                 'b' => self.read_numeric_literal(2),
                 'o' => self.read_numeric_literal(8),
                 'x' => self.read_numeric_literal(16),
-                '0'...'9' => {
+                '0'..='9' => {
                     self.nextnt(ch);
                     self.read_numeric_literal(8)
                 }
@@ -65,7 +65,7 @@ impl<It: Iterator<Item = char>> Lexer<It> {
             match ch.ch.to_ascii_lowercase() {
                 'u' => signed = false,
                 'l' => size <<= 1,
-                'a'...'z' => {
+                'a'..='z' => {
                     return Err(
                         self.error_token(LexErrorType::InvalidLiteral(format!("'{}'", ch.ch)))
                     );

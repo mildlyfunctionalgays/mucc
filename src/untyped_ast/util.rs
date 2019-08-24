@@ -46,3 +46,25 @@ macro_rules! require_len {
         );
     };
 }
+
+macro_rules! non_terminal_rule {
+    (-> $func:expr; $node:expr) => {
+        vec![$func($node)]
+    };
+    (=> $func:expr; $node:expr) => {
+        $func($node)
+    };
+}
+
+macro_rules! collapse_non_terminal {
+    ($node:expr, $($rule:ident $tok:tt $func:expr),*) => {
+        $node.children.iter().flat_map(|child| {
+               match child.node_type {
+                    $(
+                        crate::parse::types::ParseNodeType::NonTerminal(NonTerminalType::$rule) => non_terminal_rule!($tok $func; child.clone()),
+                    )*
+                    _ => unreachable!()
+               }
+        }).collect()
+    }
+}

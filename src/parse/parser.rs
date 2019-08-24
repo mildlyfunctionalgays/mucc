@@ -51,7 +51,7 @@ fn find_non_terminal<'a>(
                 }
             }
             rules
-                .into_iter()
+                .iter()
                 .filter(|(key, _)| *key == *current_rule)
                 .flat_map(|(key, value)| {
                     let mut clone = intermediate.clone();
@@ -83,7 +83,6 @@ fn left_recursions_map(
             }
         };
     }
-    println!("map = {:#?}", map);
     map
 }
 
@@ -95,7 +94,7 @@ lazy_static! {
 impl<'a> RuleState<'a> {
     pub fn new_start(rules: &[(NonTerminalType, &'a [RuleType])]) -> RuleState<'a> {
         let rule = {
-            let rules = search_rule(rules, &NonTerminalType::Start);
+            let rules = search_rule(rules, NonTerminalType::Start);
             if rules.len() > 2 {
                 panic!("There is more than one Start rule, which is not allowed.")
             } else {
@@ -145,17 +144,17 @@ impl<'a> RuleState<'a> {
             match next_rule {
                 RuleType::Terminal(item) => vec![self],
                 RuleType::NonTerminal(needed) if !self.looped_token(*needed) => {
-                    let matched_rules = search_rule(rules, needed);
+                    let matched_rules = search_rule(rules, *needed);
 
                     let self_rc = Rc::new(self);
 
                     matched_rules
-                        .into_iter()
+                        .iter()
                         .map(|rule| RuleState {
                             rule,
                             parent: Some(self_rc.clone()),
                             self_node: Rc::new(ParseNode {
-                                node_type: ParseNodeType::NonTerminal(needed.clone()),
+                                node_type: ParseNodeType::NonTerminal(*needed),
                                 children: Vec::new(),
                             }),
                         })
@@ -212,7 +211,7 @@ impl<'a> RuleState<'a> {
         }
     }
     fn looped_token(&self, token: NonTerminalType) -> bool {
-        if self.self_node.children.len() > 0 {
+        if !self.self_node.children.is_empty() {
             false
         } else if let Some(ref parent) = self.parent {
             parent.rule[parent.self_node.children.len()] == RuleType::NonTerminal(token)
@@ -225,11 +224,11 @@ impl<'a> RuleState<'a> {
 
 fn search_rule<'a>(
     rules: &[(NonTerminalType, &'a [RuleType])],
-    request: &NonTerminalType,
+    request: NonTerminalType,
 ) -> Vec<&'a [RuleType]> {
     rules
         .iter()
-        .filter(|rule| rule.0 == *request)
+        .filter(|rule| rule.0 == request)
         .map(|rule| rule.1)
         .collect()
 }

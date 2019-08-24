@@ -56,7 +56,7 @@ lazy_static! {
     static ref RULE_VEC_2: Vec<(NonTerminalType, &'static [RuleType])> = {
         (*RULE_VEC_1)
             .iter()
-            .map(|&(ref key, ref value)| (key.clone(), value.as_slice()))
+            .map(|&(ref key, ref value)| (*key, value.as_slice()))
             .collect()
     };
 }

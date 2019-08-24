@@ -90,7 +90,7 @@ where
             match ch.ch {
                 '"' => self.parse_string_literal(),
                 '0' => self.parse_numeric_zero_literal(),
-                '1'...'9' => {
+                '1'..='9' => {
                     self.nextnt(ch);
                     self.read_numeric_literal(10)
                 }

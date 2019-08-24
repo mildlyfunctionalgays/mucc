@@ -9,21 +9,9 @@ use std::rc::Rc;
 pub(super) fn read_top_statements(node: Rc<ParseNode>) -> Vec<TopStatement> {
     require_non_terminal!(node, NonTerminalType::TopStatements);
 
-    let mut statements = Vec::new();
-
-    for child in node.children.clone() {
-        match child.node_type {
-            ParseNodeType::NonTerminal(NonTerminalType::TopStatement) => {
-                statements.push(read_top_statement(child))
-            }
-            ParseNodeType::NonTerminal(NonTerminalType::TopStatements) => {
-                statements.extend(read_top_statements(child).into_iter())
-            }
-            _ => unreachable!(),
-        }
-    }
-
-    statements
+    collapse_non_terminal!(node,
+    TopStatement -> read_top_statement,
+    TopStatements => read_top_statements)
 }
 
 pub(super) fn read_top_statement(node: Rc<ParseNode>) -> TopStatement {
